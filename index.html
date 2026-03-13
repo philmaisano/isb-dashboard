@@ -15,10 +15,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .topbar-tag{font-size:11px;color:rgba(255,255,255,0.45)}
 .topbar-period{font-size:12px;background:var(--gold);color:var(--navy);padding:3px 10px;border-radius:20px;font-weight:600}
 .page{max-width:1400px;margin:0 auto;padding:1.5rem 2rem 4rem}
-.upload-zone{border:2px dashed var(--border-med);border-radius:var(--radius-lg);padding:2.5rem;text-align:center;margin-bottom:1.5rem;cursor:pointer;background:var(--surface)}
-.upload-zone:hover{background:#f0f0ec;border-color:var(--navy)}
-.upload-zone h3{font-size:15px;font-weight:600;color:var(--navy);margin-bottom:6px}
-.upload-zone p{font-size:12px;color:var(--text-3)}
+.loading{text-align:center;padding:4rem;color:var(--text-3);font-size:14px}
 .summary-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:1.25rem}
 .mc{background:var(--surface);border-radius:var(--radius);padding:1rem 1.1rem;border:0.5px solid var(--border)}
 .mc-label{font-size:11px;color:var(--text-3);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.4px}
@@ -54,11 +51,7 @@ td.metro{font-weight:500;max-width:220px;white-space:normal;color:var(--navy)}
   </div>
 </div>
 <div class="page">
-  <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
-    <h3>Upload CoStar DataExport.xlsx</h3>
-    <p>Click or drag your CoStar export here. Re-upload any time to refresh all 50 markets.</p>
-    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display:none">
-  </div>
+  <div class="loading" id="loadingMsg">Loading market data...</div>
   <div id="dashContent" style="display:none">
     <div class="summary-row" id="summaryRow"></div>
     <div class="controls">
@@ -81,7 +74,6 @@ td.metro{font-weight:500;max-width:220px;white-space:normal;color:var(--navy)}
         <option value="volume">Sort: Sales Volume</option>
       </select>
       <select id="periodFilter" onchange="renderTable()"><option value="">Latest period</option></select>
-      <button class="refresh-btn" onclick="document.getElementById('fileInput').click()">Refresh data</button>
     </div>
     <div class="table-wrap">
       <table>
@@ -91,7 +83,7 @@ td.metro{font-weight:500;max-width:220px;white-space:normal;color:var(--navy)}
           <th>Cap Rate</th><th>Occupancy %</th><th>Under Const.</th><th>Sales Volume</th>
           <th>Delivered SF</th><th>Rent Growth 12mo</th>
         </tr></thead>
-        <tbody id="tableBody"><tr><td colspan="14" style="padding:2rem;text-align:center;color:#888">Upload your CoStar export to populate data.</td></tr></tbody>
+        <tbody id="tableBody"></tbody>
       </table>
     </div>
     <div class="charts-grid">
@@ -121,10 +113,8 @@ function tierLabel(t){return["","Tier 1","Tier 2","Tier 3","Tier 4","Tier 5"][t]
 function tierClass(t){return["","t1","t2","t3","t4","t5"][t]||'';}
 function trendHtml(v){if(v==null)return'<span class="trend-flat">—</span>';if(v>0.5)return'<span class="trend-up">↑ '+v.toFixed(1)+'%</span>';if(v<-0.5)return'<span class="trend-dn">↓ '+v.toFixed(1)+'%</span>';return'<span class="trend-flat">— '+v.toFixed(1)+'%</span>';}
 let allData=[],periods=[],vacChart=null,rentChart=null,capChart=null,absChart=null;
-function processFile(wb){
-  const ws=wb.Sheets[wb.SheetNames[0]];
-  const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-  if(rows.length<2)return;
+
+function processData(rows){
   const h=rows[0].map(x=>x.toString().trim());
   const iGeo=colIdx(h,'Geography Name'),iPeriod=colIdx(h,'Period'),iPpsf=colIdx(h,'Market Sale Price Per SF','Transaction Sale Price/SF'),iRent=colIdx(h,'Market Asking Rent/SF'),iNNN=colIdx(h,'NNN Rent Overall','NNN Rent Direct'),iVac=colIdx(h,'Vacancy Rate'),iAvail=colIdx(h,'Availability Rate'),iAbs=colIdx(h,'Net Absorption SF 12 Mo','Net Absorption SF'),iCap=colIdx(h,'Market Cap Rate','Cap Rate','Median Cap Rate'),iOcc=colIdx(h,'Occupancy Rate'),iUC=colIdx(h,'Under Construction SF'),iVol=colIdx(h,'Total Sales Volume'),iDeliv=colIdx(h,'Net Delivered SF 12 Mo','Net Delivered SF','Gross Delivered SF'),iRG=colIdx(h,'Market Asking Rent Growth 12 Mo','Market Asking Rent Growth');
   const byM={};
@@ -141,11 +131,17 @@ function processFile(wb){
   allData=Object.entries(byM).map(([geo,pd])=>{const s=Object.keys(pd).sort((a,b)=>parsePeriod(b)-parsePeriod(a));return{...pd[s[0]],allPeriods:pd,tier:getTier(geo)||5};});
   const latest=periods[0]||'';
   if(latest){document.getElementById('topPeriod').textContent=latest;document.getElementById('topPeriod').style.display='inline-block';}
-  document.getElementById('uploadZone').style.display='none';
+  document.getElementById('loadingMsg').style.display='none';
   document.getElementById('dashContent').style.display='block';
-  document.getElementById('footerNote').innerHTML='<strong>Source:</strong> CoStar export — '+allData.length+' markets identified. Last loaded: '+new Date().toLocaleDateString()+'. Click Refresh to update.';
+  document.getElementById('footerNote').innerHTML='<strong>Source:</strong> CoStar export — '+allData.length+' markets loaded. Data current as of '+latest+'. Update by replacing DataExport.xlsx in GitHub repo.';
   renderTable();
 }
+
+fetch('DataExport.xlsx')
+  .then(r=>{if(!r.ok)throw new Error('File not found');return r.arrayBuffer();})
+  .then(buf=>{const wb=XLSX.read(buf,{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});processData(rows);})
+  .catch(err=>{document.getElementById('loadingMsg').innerHTML='<p style="color:#A32D2D">Could not load data: '+err.message+'</p>';});
+
 function getFiltered(){
   const s=document.getElementById('searchBox').value.toLowerCase(),t=document.getElementById('tierFilter').value,p=document.getElementById('periodFilter').value,sc=document.getElementById('sortCol').value;
   let data=allData.map(m=>{if(p&&m.allPeriods[p])return{...m,...m.allPeriods[p],tier:m.tier,allPeriods:m.allPeriods};return m;}).filter(m=>{if(s&&!m.geo.toLowerCase().includes(s))return false;if(t&&m.tier!=parseInt(t))return false;return true;});
@@ -170,17 +166,6 @@ function renderTable(){
   if(!data.length){document.getElementById('tableBody').innerHTML='<tr><td colspan="14" style="padding:2rem;text-align:center;color:#888">No markets match filters.</td></tr>';return;}
   document.getElementById('tableBody').innerHTML=data.map(m=>'<tr><td class="metro">'+m.geo.replace(/ - .*/,'')+'</td><td><span class="tier-badge '+tierClass(m.tier)+'">'+tierLabel(m.tier)+'</span></td><td>'+fmtDollar(m.ppsf)+'</td><td>'+fmtDollar(m.rent)+'</td><td>'+fmtDollar(m.nnn)+'</td><td>'+fmtPct(m.vacancy)+'</td><td>'+fmtPct(m.avail)+'</td><td>'+fmtSF(m.absorption)+'</td><td>'+fmtPct(m.cap)+'</td><td>'+fmtPct(m.occ)+'</td><td>'+fmtSF(m.uc)+'</td><td>'+fmtVol(m.vol)+'</td><td>'+fmtSF(m.deliv)+'</td><td>'+trendHtml(m.rentGrowth)+'</td></tr>').join('');
 }
-document.getElementById('fileInput').addEventListener('change',function(e){
-  const file=e.target.files[0];if(!file)return;
-  document.getElementById('uploadZone').innerHTML='<div style="padding:2rem;text-align:center;color:#888">Reading file...</div>';
-  const reader=new FileReader();
-  reader.onload=ev=>{try{processFile(XLSX.read(ev.target.result,{type:'array'}));}catch(err){alert('Error: '+err.message);}};
-  reader.readAsArrayBuffer(file);
-});
-const zone=document.getElementById('uploadZone');
-zone.addEventListener('dragover',e=>{e.preventDefault();zone.style.borderColor='#0B1F3A';});
-zone.addEventListener('dragleave',()=>zone.style.borderColor='');
-zone.addEventListener('drop',e=>{e.preventDefault();zone.style.borderColor='';const file=e.dataTransfer.files[0];if(!file)return;const dt=new DataTransfer();dt.items.add(file);document.getElementById('fileInput').files=dt.files;document.getElementById('fileInput').dispatchEvent(new Event('change'));});
 </script>
 </body>
 </html>
