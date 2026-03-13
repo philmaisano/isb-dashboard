@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ISB Industrial Market Intelligence Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --navy: #0B1F3A; --gold: #C49A2B; --blue: #185FA5; --blue-light: #E6F1FB;
+    --green: #3B6D11; --red: #A32D2D; --bg: #F7F6F3; --surface: #FFFFFF;
+    --border: rgba(0,0,0,0.12); --border-med: rgba(0,0,0,0.20);
+    --text: #1A1A1A; --text-2: #555550; --text-3: #888780;
+    --radius: 8px; --radius-lg: 12px;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+  .topbar { background: var(--navy); color: #fff; padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; height: 56px; }
+  .topbar-logo { font-size: 15px; font-weight: 600; }
+  .topbar-logo span { color: var(--gold); }
+  .topbar-tag { font-size: 11px; color: rgba(255,255,255,0.45); }
+  .topbar-period { font-size: 12px; background: var(--gold); color: var(--navy); padding: 3px 10px; border-radius: 20px; font-weight: 600; }
+  .page { max-width: 1400px; margin: 0 auto; padding: 1.5rem 2rem 4rem; }
+  .upload-zone { border: 2px dashed var(--border-med); border-radius: var(--radius-lg); padding: 2.5rem; text-align: center; margin-bottom: 1.5rem; cursor: pointer; background: var(--surface); transition: background 0.15s; }
+  .upload-zone:hover { background: #f0f0ec; border-color: var(--navy); }
+  .upload-zone h3 { font-size: 15px; font-weight: 600; color: var(--navy); margin-bottom: 6px; }
+  .upload-zone p { font-size: 12px; color: var(--text-3); }
+  .summary-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 1.25rem; }
+  .mc { background: var(--surface); border-radius: var(--radius); padding: 1rem 1.1rem; border: 0.5px solid var(--border); }
+  .mc-label { font-size: 11px; color: var(--text-3); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .mc-val { font-size: 22px; font-weight: 600; color: var(--navy); }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 1rem; align-items: center; }
+  .controls input, .controls select { font-size: 13px; padding: 7px 12px; height: 36px; border-radius: var(--radius); border: 0.5px solid var(--border-med); background: var(--surface); color: var(--text); outline: none; }
+  .controls input { min-width: 200px; }
+  .controls input:focus, .controls select:focus { border-color: var(--blue); }
+  .refresh-btn { height: 36px; padding: 0 16px; background: var(--navy); color: #fff; border: none; border-radius: var(--radius); font-size: 13px; font-weight: 500; cursor: pointer; }
+  .refresh-btn:hover { background: #1a3a6a; }
+  .table-wrap { overflow-x: auto; border: 0.5px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); margin-bottom: 1.5rem; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  thead th { text-align: left; padding: 10px 12px; font-size: 11px; font-weight: 600; color: var(--text-3); border-bottom: 1px solid var(--border); white-space: nowrap; background: #FAFAF8; text-transform: uppercase; letter-spacing: 0.3px; }
+  tbody tr { border-bottom: 0.5px solid var(--border); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--blue-light); }
+  td { padding: 9px 12px; white-space: nowrap; color: var(--text); }
+  td.metro { font-weight: 500; max-width: 220px; white-space: normal; color: var(--navy); }
+  .tier-badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
+  .t1{background:#E6F1FB;color:#0C447C} .t2{background:#EAF3DE;color:#27500A}
+  .t3{background:#FAEEDA;color:#633806} .t4{background:#FBEAF0;color:#72243E} .t5{background:#F1EFE8;color:#444441}
+  .trend-up{color:#3B6D11;font-weight:600} .trend-flat{color:#888780} .trend-dn{color:#A32D2D;font-weight:600}
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.5rem; }
+  @media(max-width:900px){ .charts-grid { grid-template-columns: 1fr; } }
+  .chart-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; }
+  .chart-card h3 { font-size: 13px; font-weight: 600; color: var(--navy); margin-bottom: 12px; }
+  .footer { font-size: 11px; color: var(--text-3); margin-top: 1rem; padding-top: 1rem; border-top: 0.5px solid var(--border); }
+  .footer strong { color: var(--gold); }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-logo">ISB <span>|</span> Industrial Market Intelligence</div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span class="topbar-period" id="topPeriod" style="display:none"></span>
+    <span class="topbar-tag">Industrial Storage Brokers</span>
+  </div>
+</div>
+<div class="page">
+  <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+    <h3>Upload CoStar DataExport.xlsx</h3>
+    <p>Click or drag your CoStar export here. Re-upload any time to refresh all 50 markets with the latest data.</p>
+    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display:none">
+  </div>
+  <div id="dashContent" style="display:none">
+    <div class="summary-row" id="summaryRow"></div>
+    <div class="controls">
+      <input type="text" id="searchBox" placeholder="Search metro..." oninput="renderTable()">
+      <select id="tierFilter" onchange="renderTable()">
+        <option value="">All tiers</option>
+        <option value="1">Tier 1 — Gateway</option>
+        <option value="2">Tier 2 — High-Growth</option>
+        <option value="3">Tier 3 — Secondary</option>
+        <option value="4">Tier 4 — Regional</option>
+        <option value="5">Tier 5 — Emerging</option>
+      </select>
+      <select id="sortCol" onchange="renderTable()">
+        <option value="tier">Sort: Tier</option>
+        <option value="ppsf">Sort: Sale Price/SF</option>
+        <option value="rent">Sort: Asking Rent</option>
+        <option value="vacancy">Sort: Vacancy</option>
+        <option value="cap">Sort: Cap Rate</option>
+        <option value="absorption">Sort: Net Absorption</option>
+        <option value="volume">Sort: Sales Volume</option>
+      </select>
+      <select id="periodFilter" onchange="renderTable()"><option value="">Latest period</option></select>
+      <button class="refresh-btn" onclick="document.getElementById('fileInput').click()">Refresh data</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Metro</th><th>Tier</th><th>Sale Price/SF</th><th>Asking Rent/SF</th>
+          <th>NNN Rent/SF</th><th>Vacancy %</th><th>Avail. Rate %</th><th>Net Absorption</th>
+          <th>Cap Rate</th><th>Occupancy %</th><th>Under Const.</th><th>Sales Volume</th>
+          <th>Delivered SF</th><th>Rent Growth 12mo</th>
+        </tr></thead>
+        <tbody id="tableBody"><tr><td colspan="14" style="padding:2rem;text-align:center;color:#888">Upload your CoStar export to populate data.</td></tr></tbody>
+      </table>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-card"><h3>Vacancy rate by market</h3><div style="position:relative;height:280px"><canvas id="vacChart"></canvas></div></div>
+      <div class="chart-card"><h3>Asking rent/SF by market</h3><div style="position:relative;height:280px"><canvas id="rentChart"></canvas></div></div>
+      <div class="chart-card"><h3>Cap rate by market</h3><div style="position:relative;height:280px"><canvas id="capChart"></canvas></div></div>
+      <div class="chart-card"><h3>Net absorption by market</h3><div style="position:relative;height:280px"><canvas id="absChart"></canvas></div></div>
+    </div>
+    <div class="footer" id="footerNote"></div>
+  </div>
+</div>
+<script>
+const TIER_MAP={1:["dallas","fort worth","inland empire","riverside","san bernardino","chicago","houston","atlanta","phoenix","northern new jersey","newark","new jersey","los angeles","south bay","philadelphia","lehigh valley","nashville"],2:["austin","san antonio","tampa","st. pete","charlotte","denver","indianapolis","columbus","memphis","kansas city","orlando"],3:["las vegas","savannah","charleston","san francisco","east bay","raleigh","salt lake","jacksonville","minneapolis","cincinnati","st. louis"],4:["seattle","tacoma","portland","miami","fort lauderdale","detroit","san diego","el paso","sacramento","stockton","modesto","bridgeport","hartford","baltimore"],5:["greensboro","winston","greenville","spartanburg","oklahoma city","tulsa","wilmington","little rock","louisville","allentown","scranton","birmingham"]};
+const TARGET_KW=Object.values(TIER_MAP).flat();
+function getTier(geo){const n=geo.toLowerCase();for(const[t,kws]of Object.entries(TIER_MAP)){for(const k of kws){if(n.includes(k))return parseInt(t);}}return null;}
+function isTarget(geo){const n=geo.toLowerCase();return TARGET_KW.some(k=>n.includes(k));}
+function colIdx(headers,...names){for(const name of names){const i=headers.findIndex(h=>h&&h.toString().toLowerCase().includes(name.toLowerCase()));if(i>=0)return i;}return -1;}
+function rval(row,i){if(i<0||i>=row.length)return null;const v=row[i];return(v===''||v===null||v===undefined)?null:v;}
+function smartPct(val){if(val==null)return null;const n=parseFloat(val);if(isNaN(n))return null;return parseFloat((n>0&&n<1?n*100:n).toFixed(2));}
+function num(val){if(val==null)return null;const n=parseFloat(val);return isNaN(n)?null:n;}
+function parsePeriod(p){if(!p)return 0;const m=p.toString().match(/(\d{4})\s*Q(\d)/);return m?parseInt(m[1])*10+parseInt(m[2]):0;}
+function fmtSF(n){if(n==null)return'—';if(Math.abs(n)>=1e6)return(n/1e6).toFixed(1)+'M SF';if(Math.abs(n)>=1000)return(n/1000).toFixed(0)+'K SF';return n+' SF';}
+function fmtVol(n){if(n==null)return'—';if(n>=1e9)return'$'+(n/1e9).toFixed(2)+'B';if(n>=1e6)return'$'+(n/1e6).toFixed(0)+'M';if(n>=1000)return'$'+(n/1000).toFixed(0)+'K';return'$'+n.toLocaleString();}
+function fmtPct(n){if(n==null)return'—';return n.toFixed(1)+'%';}
+function fmtDollar(n){if(n==null)return'—';return'$'+n.toFixed(2);}
+function tierLabel(t){return["","Tier 1","Tier 2","Tier 3","Tier 4","Tier 5"][t]||'—';}
+function tierClass(t){return["","t1","t2","t3","t4","t5"][t]||'';}
+function trendHtml(v){if(v==null)return'<span class="trend-flat">—</span>';if(v>0.5)return`<span class="trend-up">↑ ${v.toFixed(1)}%</span>`;if(v<-0.5)return`<span class="trend-dn">↓ ${v.toFixed(1)}%</span>`;return`<span class="trend-flat">— ${v.toFixed(1)}%</span>`;}
+let allData=[],periods=[],vacChart=null,rentChart=null,capChart=null,absChart=null;
+function processFile(wb){
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+  if(rows.length<2)return;
+  const h=rows[0].map(x=>x.toString().trim());
+  const iGeo=colIdx(h,'Geography Name'),iPeriod=colIdx(h,'Period'),iPpsf=colIdx(h,'Market Sale Price Per SF','Transaction Sale Price/SF'),iRent=colIdx(h,'Market Asking Rent/SF'),iNNN=colIdx(h,'NNN Rent Overall','NNN Rent Direct'),iVac=colIdx(h,'Vacancy Rate'),iAvail=colIdx(h,'Availability Rate'),iAbs=colIdx(h,'Net Absorption SF 12 Mo','Net Absorption SF'),iCap=colIdx(h,'Market Cap Rate','Cap Rate','Median Cap Rate'),iOcc=colIdx(h,'Occupancy Rate'),iUC=colIdx(h,'Under Construction SF'),iVol=colIdx(h,'Total Sales Volume'),iDeliv=colIdx(h,'Net Delivered SF 12 Mo','Net Delivered SF','Gross Delivered SF'),iRG=colIdx(h,'Market Asking Rent Growth 12 Mo','Market Asking Rent Growth');
+  const byM={};
+  for(let i=1;i<rows.length;i++){
+    const row=rows[i];const geo=rval(row,iGeo);const period=rval(row,iPeriod);
+    if(!geo||!period||!isTarget(geo.toString()))continue;
+    const key=geo.toString().trim();if(!byM[key])byM[key]={};
+    byM[key][period.toString().trim()]={geo:key,period:period.toString().trim(),ppsf:num(rval(row,iPpsf)),rent:num(rval(row,iRent)),nnn:num(rval(row,iNNN)),vacancy:smartPct(rval(row,iVac)),avail:smartPct(rval(row,iAvail)),absorption:num(rval(row,iAbs)),cap:smartPct(rval(row,iCap)),occ:smartPct(rval(row,iOcc)),uc:num(rval(row,iUC)),vol:num(rval(row,iVol)),deliv:num(rval(row,iDeliv)),rentGrowth:smartPct(rval(row,iRG))};
+  }
+  const allP=new Set();Object.values(byM).forEach(mp=>Object.keys(mp).forEach(p=>allP.add(p)));
+  periods=Array.from(allP).sort((a,b)=>parsePeriod(b)-parsePeriod(a));
+  const sel=document.getElementById('periodFilter');sel.innerHTML='<option value="">Latest period</option>';
+  periods.forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;sel.appendChild(o);});
+  allData=Object.entries(byM).map(([geo,pd])=>{const s=Object.keys(pd).sort((a,b)=>parsePeriod(b)-parsePeriod(a));return{...pd[s[0]],allPeriods:pd,tier:getTier(geo)||5};});
+  const latest=periods[0]||'';
+  if(latest){document.getElementById('topPeriod').textContent=latest;document.getElementById('topPeriod').style.display='inline-block';}
+  document.getElementById('uploadZone').style.display='none';
+  document.getElementById('dashContent').style.display='block';
+  document.getElementById('footerNote').innerHTML=`<strong>Source:</strong> CoStar export — ${rows.length-1} rows parsed, ${allData.length} markets identified. Last loaded: ${new Date().toLocaleDateString()}. Click "Refresh data" to update.`;
+  renderTable();
+}
+function getFiltered(){
+  const s=document.getElementById('searchBox').value.toLowerCase(),t=document.getElementById('tierFilter').value,p=document.getElementById('periodFilter').value,sc=document.getElementById('sortCol').value;
+  let data=allData.map(m=>{if(p&&m.allPeriods[p])return{...m,...m.allPeriods[p],tier:m.tier,allPeriods:m.allPeriods};return m;}).filter(m=>{if(s&&!m.geo.toLowerCase().includes(s))return false;if(t&&m.tier!=parseInt(t))return false;return true;});
+  data.sort((a,b)=>{if(sc==='tier')return a.tier-b.tier;if(sc==='ppsf')return(b.ppsf||0)-(a.ppsf||0);if(sc==='rent')return(b.rent||0)-(a.rent||0);if(sc==='vacancy')return(a.vacancy||99)-(b.vacancy||99);if(sc==='cap')return(b.cap||0)-(a.cap||0);if(sc==='absorption')return(b.absorption||0)-(a.absorption||0);if(sc==='volume')return(b.vol||0)-(a.vol||0);return a.tier-b.tier;});
+  return data;
+}
+function renderSummary(data){
+  const has=arr=>arr.filter(x=>x!=null),avg=arr=>{const h=has(arr);return h.length?h.reduce((s,v)=>s+v,0)/h.length:null;},sm=arr=>has(arr).reduce((s,v)=>s+v,0);
+  document.getElementById('summaryRow').innerHTML=[{label:'Avg vacancy',val:fmtPct(avg(data.map(m=>m.vacancy)))},{label:'Avg asking rent/SF',val:fmtDollar(avg(data.map(m=>m.rent)))},{label:'Avg sale price/SF',val:fmtDollar(avg(data.map(m=>m.ppsf)))},{label:'Avg cap rate',val:fmtPct(avg(data.map(m=>m.cap)))},{label:'Total sales volume',val:fmtVol(sm(data.map(m=>m.vol||0)))},{label:'Markets shown',val:data.length}].map(m=>`<div class="mc"><div class="mc-label">${m.label}</div><div class="mc-val">${m.val}</div></div>`).join('');
+}
+function renderCharts(data){
+  const top=data.slice(0,15),labels=top.map(m=>m.geo.replace(/ - .*/,'').replace(/,.*/,'').substring(0,16));
+  const mk=(id,vals,color,fmt)=>{const ctx=document.getElementById(id);if(!ctx)return null;return new Chart(ctx,{type:'bar',data:{labels,datasets:[{data:vals,backgroundColor:color,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{callback:fmt,font:{size:10}}},x:{ticks:{maxRotation:50,font:{size:9}}}}}});};
+  if(vacChart)vacChart.destroy();if(rentChart)rentChart.destroy();if(capChart)capChart.destroy();if(absChart)absChart.destroy();
+  vacChart=mk('vacChart',top.map(m=>m.vacancy!=null?parseFloat(m.vacancy.toFixed(1)):null),'#378ADD',v=>v+'%');
+  rentChart=mk('rentChart',top.map(m=>m.rent!=null?parseFloat(m.rent.toFixed(2)):null),'#1D9E75',v=>'$'+v);
+  capChart=mk('capChart',top.map(m=>m.cap!=null?parseFloat(m.cap.toFixed(2)):null),'#C49A2B',v=>v+'%');
+  absChart=mk('absChart',top.map(m=>m.absorption!=null?parseFloat((m.absorption/1e6).toFixed(2)):null),'#534AB7',v=>v+'M');
+}
+function renderTable(){
+  const data=getFiltered();renderSummary(data);renderCharts(data);
+  if(!data.length){document.getElementById('tableBody').innerHTML='<tr><td colspan="14" style="padding:2rem;text-align:center;color:#888">No markets match filters.</td></tr>';return;}
+  document.getElementById('tableBody').innerHTML=data.map(m=>`<tr><td class="metro">${m.geo.replace(/ - .*/,'')}</td><td><span class="tier-badge ${tierClass(m.tier)}">${tierLabel(m.tier)}</span></td><td>${fmtDollar(m.ppsf)}</td><td>${fmtDollar(m.rent)}</td><td>${fmtDollar(m.nnn)}</td><td>${fmtPct(m.vacancy)}</td><td>${fmtPct(m.avail)}</td><td>${fmtSF(m.absorption)}</td><td>${fmtPct(m.cap)}</td><td>${fmtPct(m.occ)}</td><td>${fmtSF(m.uc)}</td><td>${fmtVol(m.vol)}</td><td>${fmtSF(m.deliv)}</td><td>${trendHtml(m.rentGrowth)}</td></tr>`).join('');
+}
+document.getElementById('fileInput').addEventListener('change',function(e){
+  const file=e.target.files[0];if(!file)return;
+  document.getElementById('uploadZone').innerHTML='<div style="padding:2rem;text-align:center;color:#888">Reading file...</div>';
+  const reader=new FileReader();
+  reader.onload=ev=>{try{processFile(XLSX.read(ev.target.result,{type:'array'}));}catch(err){alert('Error: '+err.message);}};
+  reader.readAsArrayBuffer(file);
+});
+const zone=document.getElementById('uploadZone');
+zone.addEventListener('dragover',e=>{e.preventDefault();zone.style.borderColor='#0B1F3A';});
+zone.addEventListener('dragleave',()=>zone.style.borderColor='');
+zone.addEventListener('drop',e=>{e.preventDefault();zone.style.borderColor='';const file=e.dataTransfer.files[0];if(!file)return;const dt=new DataTransfer();dt.items.add(file);document.getElementById('fileInput').files=dt.files;document.getElementById('fileInput').dispatchEvent(new Event('change'));});
+</script>
+</body>
+</html>
