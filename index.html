@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ISB Industrial Market Intelligence Dashboard</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -23,7 +22,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .controls{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:1rem;align-items:center}
 .controls input,.controls select{font-size:13px;padding:7px 12px;height:36px;border-radius:var(--radius);border:0.5px solid var(--border-med);background:var(--surface);color:var(--text);outline:none}
 .controls input{min-width:200px}
-.refresh-btn{height:36px;padding:0 16px;background:var(--navy);color:#fff;border:none;border-radius:var(--radius);font-size:13px;font-weight:500;cursor:pointer}
 .table-wrap{overflow-x:auto;border:0.5px solid var(--border);border-radius:var(--radius-lg);background:var(--surface);margin-bottom:1.5rem}
 table{width:100%;border-collapse:collapse;font-size:12.5px}
 thead th{text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:var(--text-3);border-bottom:1px solid var(--border);white-space:nowrap;background:#FAFAF8;text-transform:uppercase;letter-spacing:0.3px}
@@ -73,7 +71,6 @@ td.metro{font-weight:500;max-width:220px;white-space:normal;color:var(--navy)}
         <option value="absorption">Sort: Net Absorption</option>
         <option value="volume">Sort: Sales Volume</option>
       </select>
-      <select id="periodFilter" onchange="renderTable()"><option value="">Latest period</option></select>
     </div>
     <div class="table-wrap">
       <table>
@@ -96,15 +93,6 @@ td.metro{font-weight:500;max-width:220px;white-space:normal;color:var(--navy)}
   </div>
 </div>
 <script>
-const TIER_MAP={1:["dallas","fort worth","inland empire","riverside","san bernardino","chicago","houston","atlanta","phoenix","northern new jersey","newark","new jersey","los angeles","south bay","philadelphia","lehigh valley","nashville"],2:["austin","san antonio","tampa","st. pete","charlotte","denver","indianapolis","columbus","memphis","kansas city","orlando"],3:["las vegas","savannah","charleston","san francisco","east bay","raleigh","salt lake","jacksonville","minneapolis","cincinnati","st. louis"],4:["seattle","tacoma","portland","miami","fort lauderdale","detroit","san diego","el paso","sacramento","stockton","modesto","bridgeport","hartford","baltimore"],5:["greensboro","winston","greenville","spartanburg","oklahoma city","tulsa","wilmington","little rock","louisville","allentown","scranton","birmingham"]};
-const TARGET_KW=Object.values(TIER_MAP).flat();
-function getTier(geo){const n=geo.toLowerCase();for(const[t,kws]of Object.entries(TIER_MAP)){for(const k of kws){if(n.includes(k))return parseInt(t);}}return null;}
-function isTarget(geo){const n=geo.toLowerCase();return TARGET_KW.some(k=>n.includes(k));}
-function colIdx(headers,...names){for(const name of names){const i=headers.findIndex(h=>h&&h.toString().toLowerCase().includes(name.toLowerCase()));if(i>=0)return i;}return -1;}
-function rval(row,i){if(i<0||i>=row.length)return null;const v=row[i];return(v===''||v===null||v===undefined)?null:v;}
-function smartPct(val){if(val==null)return null;const n=parseFloat(val);if(isNaN(n))return null;return parseFloat((n>0&&n<1?n*100:n).toFixed(2));}
-function num(val){if(val==null)return null;const n=parseFloat(val);return isNaN(n)?null:n;}
-function parsePeriod(p){if(!p)return 0;const m=p.toString().match(/(\d{4})\s*Q(\d)/);return m?parseInt(m[1])*10+parseInt(m[2]):0;}
 function fmtSF(n){if(n==null)return'—';if(Math.abs(n)>=1e6)return(n/1e6).toFixed(1)+'M SF';if(Math.abs(n)>=1000)return(n/1000).toFixed(0)+'K SF';return n+' SF';}
 function fmtVol(n){if(n==null)return'—';if(n>=1e9)return'$'+(n/1e9).toFixed(2)+'B';if(n>=1e6)return'$'+(n/1e6).toFixed(0)+'M';if(n>=1000)return'$'+(n/1000).toFixed(0)+'K';return'$'+n.toLocaleString();}
 function fmtPct(n){if(n==null)return'—';return n.toFixed(1)+'%';}
@@ -112,39 +100,24 @@ function fmtDollar(n){if(n==null)return'—';return'$'+n.toFixed(2);}
 function tierLabel(t){return["","Tier 1","Tier 2","Tier 3","Tier 4","Tier 5"][t]||'—';}
 function tierClass(t){return["","t1","t2","t3","t4","t5"][t]||'';}
 function trendHtml(v){if(v==null)return'<span class="trend-flat">—</span>';if(v>0.5)return'<span class="trend-up">↑ '+v.toFixed(1)+'%</span>';if(v<-0.5)return'<span class="trend-dn">↓ '+v.toFixed(1)+'%</span>';return'<span class="trend-flat">— '+v.toFixed(1)+'%</span>';}
-let allData=[],periods=[],vacChart=null,rentChart=null,capChart=null,absChart=null;
+let allData=[],vacChart=null,rentChart=null,capChart=null,absChart=null;
 
-function processData(rows){
-  const h=rows[0].map(x=>x.toString().trim());
-  const iGeo=colIdx(h,'Geography Name'),iPeriod=colIdx(h,'Period'),iPpsf=colIdx(h,'Market Sale Price Per SF','Transaction Sale Price/SF'),iRent=colIdx(h,'Market Asking Rent/SF'),iNNN=colIdx(h,'NNN Rent Overall','NNN Rent Direct'),iVac=colIdx(h,'Vacancy Rate'),iAvail=colIdx(h,'Availability Rate'),iAbs=colIdx(h,'Net Absorption SF 12 Mo','Net Absorption SF'),iCap=colIdx(h,'Market Cap Rate','Cap Rate','Median Cap Rate'),iOcc=colIdx(h,'Occupancy Rate'),iUC=colIdx(h,'Under Construction SF'),iVol=colIdx(h,'Total Sales Volume'),iDeliv=colIdx(h,'Net Delivered SF 12 Mo','Net Delivered SF','Gross Delivered SF'),iRG=colIdx(h,'Market Asking Rent Growth 12 Mo','Market Asking Rent Growth');
-  const byM={};
-  for(let i=1;i<rows.length;i++){
-    const row=rows[i];const geo=rval(row,iGeo);const period=rval(row,iPeriod);
-    if(!geo||!period||!isTarget(geo.toString()))continue;
-    const key=geo.toString().trim();if(!byM[key])byM[key]={};
-    byM[key][period.toString().trim()]={geo:key,period:period.toString().trim(),ppsf:num(rval(row,iPpsf)),rent:num(rval(row,iRent)),nnn:num(rval(row,iNNN)),vacancy:smartPct(rval(row,iVac)),avail:smartPct(rval(row,iAvail)),absorption:num(rval(row,iAbs)),cap:smartPct(rval(row,iCap)),occ:smartPct(rval(row,iOcc)),uc:num(rval(row,iUC)),vol:num(rval(row,iVol)),deliv:num(rval(row,iDeliv)),rentGrowth:smartPct(rval(row,iRG))};
-  }
-  const allP=new Set();Object.values(byM).forEach(mp=>Object.keys(mp).forEach(p=>allP.add(p)));
-  periods=Array.from(allP).sort((a,b)=>parsePeriod(b)-parsePeriod(a));
-  const sel=document.getElementById('periodFilter');sel.innerHTML='<option value="">Latest period</option>';
-  periods.forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;sel.appendChild(o);});
-  allData=Object.entries(byM).map(([geo,pd])=>{const s=Object.keys(pd).sort((a,b)=>parsePeriod(b)-parsePeriod(a));return{...pd[s[0]],allPeriods:pd,tier:getTier(geo)||5};});
-  const latest=periods[0]||'';
-  if(latest){document.getElementById('topPeriod').textContent=latest;document.getElementById('topPeriod').style.display='inline-block';}
-  document.getElementById('loadingMsg').style.display='none';
-  document.getElementById('dashContent').style.display='block';
-  document.getElementById('footerNote').innerHTML='<strong>Source:</strong> CoStar export — '+allData.length+' markets loaded. Data current as of '+latest+'. Update by replacing DataExport.xlsx in GitHub repo.';
-  renderTable();
-}
-
-fetch('DataExport.xlsx')
-  .then(r=>{if(!r.ok)throw new Error('File not found');return r.arrayBuffer();})
-  .then(buf=>{const wb=XLSX.read(buf,{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});processData(rows);})
-  .catch(err=>{document.getElementById('loadingMsg').innerHTML='<p style="color:#A32D2D">Could not load data: '+err.message+'</p>';});
+fetch('data.json')
+  .then(r=>r.json())
+  .then(data=>{
+    allData=data;
+    const latest=data[0]?.period||'';
+    if(latest){document.getElementById('topPeriod').textContent=latest;document.getElementById('topPeriod').style.display='inline-block';}
+    document.getElementById('loadingMsg').style.display='none';
+    document.getElementById('dashContent').style.display='block';
+    document.getElementById('footerNote').innerHTML='<strong>Source:</strong> CoStar — '+data.length+' markets loaded. Period: '+latest+'. Update by replacing data.json in GitHub.';
+    renderTable();
+  })
+  .catch(err=>{document.getElementById('loadingMsg').innerHTML='<p style="color:#A32D2D;font-size:13px">Error loading data: '+err.message+'</p>';});
 
 function getFiltered(){
-  const s=document.getElementById('searchBox').value.toLowerCase(),t=document.getElementById('tierFilter').value,p=document.getElementById('periodFilter').value,sc=document.getElementById('sortCol').value;
-  let data=allData.map(m=>{if(p&&m.allPeriods[p])return{...m,...m.allPeriods[p],tier:m.tier,allPeriods:m.allPeriods};return m;}).filter(m=>{if(s&&!m.geo.toLowerCase().includes(s))return false;if(t&&m.tier!=parseInt(t))return false;return true;});
+  const s=document.getElementById('searchBox').value.toLowerCase(),t=document.getElementById('tierFilter').value,sc=document.getElementById('sortCol').value;
+  let data=allData.filter(m=>{if(s&&!m.geo.toLowerCase().includes(s))return false;if(t&&m.tier!=parseInt(t))return false;return true;});
   data.sort((a,b)=>{if(sc==='tier')return a.tier-b.tier;if(sc==='ppsf')return(b.ppsf||0)-(a.ppsf||0);if(sc==='rent')return(b.rent||0)-(a.rent||0);if(sc==='vacancy')return(a.vacancy||99)-(b.vacancy||99);if(sc==='cap')return(b.cap||0)-(a.cap||0);if(sc==='absorption')return(b.absorption||0)-(a.absorption||0);if(sc==='volume')return(b.vol||0)-(a.vol||0);return a.tier-b.tier;});
   return data;
 }
