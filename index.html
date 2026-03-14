@@ -22,6 +22,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .controls{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:1rem;align-items:center}
 .controls input,.controls select{font-size:13px;padding:7px 12px;height:36px;border-radius:var(--radius);border:0.5px solid var(--border-med);background:var(--surface);color:var(--text);outline:none}
 .controls input{min-width:200px}
+.add-comp-btn{height:36px;padding:0 16px;background:var(--gold);color:var(--navy);border:none;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;margin-left:auto}
 .table-wrap{overflow-x:auto;border:0.5px solid var(--border);border-radius:var(--radius-lg);background:var(--surface);margin-bottom:1.5rem}
 table{width:100%;border-collapse:collapse;font-size:12.5px}
 thead th{text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:var(--text-3);border-bottom:1px solid var(--border);white-space:nowrap;background:#FAFAF8;text-transform:uppercase;letter-spacing:0.3px}
@@ -38,6 +39,28 @@ td.metro{font-weight:500;max-width:220px;white-space:normal;color:var(--navy)}
 .chart-card h3{font-size:13px;font-weight:600;color:var(--navy);margin-bottom:12px}
 .footer{font-size:11px;color:var(--text-3);margin-top:1rem;padding-top:1rem;border-top:0.5px solid var(--border)}
 .footer strong{color:var(--gold)}
+.comps-section{margin-bottom:2rem}
+.comps-title{font-size:15px;font-weight:600;color:var(--navy);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--gold)}
+.comp-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.25rem;margin-bottom:10px}
+.comp-address{font-size:14px;font-weight:600;color:var(--navy);margin-bottom:6px}
+.comp-meta{display:flex;flex-wrap:wrap;gap:16px;font-size:12px;color:var(--text-3)}
+.comp-meta span strong{color:var(--text)}
+.comp-notes{font-size:12px;color:var(--text-3);margin-top:6px;font-style:italic}
+.comp-date{font-size:11px;color:var(--text-3);margin-top:4px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--radius-lg);padding:2rem;width:100%;max-width:560px;margin:1rem}
+.modal h2{font-size:16px;font-weight:600;color:var(--navy);margin-bottom:1.25rem}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group.full{grid-column:1/-1}
+.form-group label{font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.4px}
+.form-group input,.form-group select,.form-group textarea{font-size:13px;padding:7px 10px;border-radius:var(--radius);border:0.5px solid var(--border-med);background:var(--bg);color:var(--text);outline:none}
+.form-group textarea{height:70px;resize:vertical}
+.modal-btns{display:flex;gap:10px;justify-content:flex-end;margin-top:1rem}
+.btn-save{padding:8px 20px;background:var(--navy);color:#fff;border:none;border-radius:var(--radius);font-size:13px;font-weight:500;cursor:pointer}
+.btn-cancel{padding:8px 20px;background:transparent;color:var(--text-3);border:0.5px solid var(--border-med);border-radius:var(--radius);font-size:13px;cursor:pointer}
+.saving-msg{font-size:12px;color:var(--text-3);margin-right:auto;align-self:center}
 </style>
 </head>
 <body>
@@ -53,8 +76,8 @@ td.metro{font-weight:500;max-width:220px;white-space:normal;color:var(--navy)}
   <div id="dashContent" style="display:none">
     <div class="summary-row" id="summaryRow"></div>
     <div class="controls">
-      <input type="text" id="searchBox" placeholder="Search metro..." oninput="renderTable()">
-      <select id="tierFilter" onchange="renderTable()">
+      <input type="text" id="searchBox" placeholder="Search metro..." oninput="renderAll()">
+      <select id="tierFilter" onchange="renderAll()">
         <option value="">All tiers</option>
         <option value="1">Tier 1 — Gateway</option>
         <option value="2">Tier 2 — High-Growth</option>
@@ -62,7 +85,7 @@ td.metro{font-weight:500;max-width:220px;white-space:normal;color:var(--navy)}
         <option value="4">Tier 4 — Regional</option>
         <option value="5">Tier 5 — Emerging</option>
       </select>
-      <select id="sortCol" onchange="renderTable()">
+      <select id="sortCol" onchange="renderAll()">
         <option value="tier">Sort: Tier</option>
         <option value="ppsf">Sort: Sale Price/SF</option>
         <option value="rent">Sort: Asking Rent</option>
@@ -71,7 +94,14 @@ td.metro{font-weight:500;max-width:220px;white-space:normal;color:var(--navy)}
         <option value="absorption">Sort: Net Absorption</option>
         <option value="volume">Sort: Sales Volume</option>
       </select>
+      <button class="add-comp-btn" onclick="openModal()">+ Add Comp</button>
     </div>
+
+    <div id="compsSection" class="comps-section" style="display:none">
+      <div class="comps-title">Traded Comps — <span id="compsMarketLabel"></span></div>
+      <div id="compsList"></div>
+    </div>
+
     <div class="table-wrap">
       <table>
         <thead><tr>
@@ -92,7 +122,86 @@ td.metro{font-weight:500;max-width:220px;white-space:normal;color:var(--navy)}
     <div class="footer" id="footerNote"></div>
   </div>
 </div>
+
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h2>Add Traded Comp</h2>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>Address</label>
+        <input type="text" id="f_address" placeholder="123 Industrial Blvd, Dallas TX">
+      </div>
+      <div class="form-group">
+        <label>Market / Metro</label>
+        <input type="text" id="f_market" placeholder="e.g. Dallas">
+      </div>
+      <div class="form-group">
+        <label>Asset Type</label>
+        <select id="f_type">
+          <option>Warehouse</option>
+          <option>IOS</option>
+          <option>Small Bay / Flex</option>
+          <option>Truck Terminal</option>
+          <option>Self Storage</option>
+          <option>RV / Boat Storage</option>
+          <option>Land</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Sale Price</label>
+        <input type="text" id="f_price" placeholder="$4,500,000">
+      </div>
+      <div class="form-group">
+        <label>Price / SF</label>
+        <input type="text" id="f_ppsf" placeholder="$145">
+      </div>
+      <div class="form-group">
+        <label>Price / Acre</label>
+        <input type="text" id="f_ppacre" placeholder="$850,000">
+      </div>
+      <div class="form-group">
+        <label>Building SF</label>
+        <input type="text" id="f_sf" placeholder="31,000">
+      </div>
+      <div class="form-group">
+        <label>Cap Rate</label>
+        <input type="text" id="f_cap" placeholder="5.25%">
+      </div>
+      <div class="form-group">
+        <label>Buyer</label>
+        <input type="text" id="f_buyer" placeholder="Buyer name">
+      </div>
+      <div class="form-group">
+        <label>Seller</label>
+        <input type="text" id="f_seller" placeholder="Seller name">
+      </div>
+      <div class="form-group">
+        <label>Sale Date</label>
+        <input type="date" id="f_date">
+      </div>
+      <div class="form-group">
+        <label>Added By</label>
+        <input type="text" id="f_addedby" placeholder="Your name">
+      </div>
+      <div class="form-group full">
+        <label>Notes</label>
+        <textarea id="f_notes" placeholder="Lease type, tenant, condition, deal notes..."></textarea>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <span class="saving-msg" id="savingMsg" style="display:none">Saving...</span>
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveComp()">Save Comp</button>
+    </div>
+  </div>
+</div>
+
 <script>
+const GITHUB_TOKEN='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';
+const GITHUB_REPO='philmaisano/isb-dashboard';
+const COMPS_FILE='comps.json';
+
 function fmtSF(n){if(n==null)return'—';if(Math.abs(n)>=1e6)return(n/1e6).toFixed(1)+'M SF';if(Math.abs(n)>=1000)return(n/1000).toFixed(0)+'K SF';return n+' SF';}
 function fmtVol(n){if(n==null)return'—';if(n>=1e9)return'$'+(n/1e9).toFixed(2)+'B';if(n>=1e6)return'$'+(n/1e6).toFixed(0)+'M';if(n>=1000)return'$'+(n/1000).toFixed(0)+'K';return'$'+n.toLocaleString();}
 function fmtPct(n){if(n==null)return'—';return n.toFixed(1)+'%';}
@@ -100,31 +209,79 @@ function fmtDollar(n){if(n==null)return'—';return'$'+n.toFixed(2);}
 function tierLabel(t){return["","Tier 1","Tier 2","Tier 3","Tier 4","Tier 5"][t]||'—';}
 function tierClass(t){return["","t1","t2","t3","t4","t5"][t]||'';}
 function trendHtml(v){if(v==null)return'<span class="trend-flat">—</span>';if(v>0.5)return'<span class="trend-up">↑ '+v.toFixed(1)+'%</span>';if(v<-0.5)return'<span class="trend-dn">↓ '+v.toFixed(1)+'%</span>';return'<span class="trend-flat">— '+v.toFixed(1)+'%</span>';}
-let allData=[],vacChart=null,rentChart=null,capChart=null,absChart=null;
 
-fetch('data.json')
-  .then(r=>r.json())
-  .then(data=>{
-    allData=data;
-    const latest=data[0]?.period||'';
-    if(latest){document.getElementById('topPeriod').textContent=latest;document.getElementById('topPeriod').style.display='inline-block';}
-    document.getElementById('loadingMsg').style.display='none';
-    document.getElementById('dashContent').style.display='block';
-    document.getElementById('footerNote').innerHTML='<strong>Source:</strong> CoStar — '+data.length+' markets loaded. Period: '+latest+'. Update by replacing data.json in GitHub.';
-    renderTable();
-  })
-  .catch(err=>{document.getElementById('loadingMsg').innerHTML='<p style="color:#A32D2D;font-size:13px">Error loading data: '+err.message+'</p>';});
+let allData=[],allComps=[],vacChart=null,rentChart=null,capChart=null,absChart=null;
 
-function getFiltered(){
-  const s=document.getElementById('searchBox').value.toLowerCase(),t=document.getElementById('tierFilter').value,sc=document.getElementById('sortCol').value;
+Promise.all([
+  fetch('data.json').then(r=>r.json()),
+  fetch('comps.json?t='+Date.now()).then(r=>r.json()).catch(()=>[])
+]).then(([markets,comps])=>{
+  allData=markets;
+  allComps=comps;
+  const latest=markets[0]?.period||'';
+  if(latest){document.getElementById('topPeriod').textContent=latest;document.getElementById('topPeriod').style.display='inline-block';}
+  document.getElementById('loadingMsg').style.display='none';
+  document.getElementById('dashContent').style.display='block';
+  document.getElementById('footerNote').innerHTML='<strong>Source:</strong> CoStar — '+markets.length+' markets. '+comps.length+' comps on file. Period: '+latest+'.';
+  renderAll();
+}).catch(err=>{document.getElementById('loadingMsg').innerHTML='<p style="color:#A32D2D;font-size:13px">Error: '+err.message+'</p>';});
+
+function getSearch(){return document.getElementById('searchBox').value.toLowerCase();}
+function getTierFilter(){return document.getElementById('tierFilter').value;}
+
+function getFilteredMarkets(){
+  const s=getSearch(),t=getTierFilter(),sc=document.getElementById('sortCol').value;
   let data=allData.filter(m=>{if(s&&!m.geo.toLowerCase().includes(s))return false;if(t&&m.tier!=parseInt(t))return false;return true;});
   data.sort((a,b)=>{if(sc==='tier')return a.tier-b.tier;if(sc==='ppsf')return(b.ppsf||0)-(a.ppsf||0);if(sc==='rent')return(b.rent||0)-(a.rent||0);if(sc==='vacancy')return(a.vacancy||99)-(b.vacancy||99);if(sc==='cap')return(b.cap||0)-(a.cap||0);if(sc==='absorption')return(b.absorption||0)-(a.absorption||0);if(sc==='volume')return(b.vol||0)-(a.vol||0);return a.tier-b.tier;});
   return data;
 }
+
+function getFilteredComps(){
+  const s=getSearch();
+  if(!s) return [];
+  return allComps.filter(c=>c.market&&c.market.toLowerCase().includes(s));
+}
+
+function renderAll(){
+  const markets=getFilteredMarkets();
+  const comps=getFilteredComps();
+  renderSummary(markets);
+  renderCharts(markets);
+  renderTable(markets);
+  renderComps(comps);
+}
+
+function renderComps(comps){
+  const sec=document.getElementById('compsSection');
+  const s=getSearch();
+  if(!comps.length){sec.style.display='none';return;}
+  sec.style.display='block';
+  document.getElementById('compsMarketLabel').textContent=s.charAt(0).toUpperCase()+s.slice(1);
+  document.getElementById('compsList').innerHTML=comps.sort((a,b)=>new Date(b.dateAdded)-new Date(a.dateAdded)).map(c=>`
+    <div class="comp-card">
+      <div class="comp-address">${c.address||'—'}</div>
+      <div class="comp-meta">
+        <span><strong>Type:</strong> ${c.type||'—'}</span>
+        <span><strong>Sale Price:</strong> ${c.price||'—'}</span>
+        <span><strong>Price/SF:</strong> ${c.ppsf||'—'}</span>
+        <span><strong>Price/Acre:</strong> ${c.ppacre||'—'}</span>
+        <span><strong>Bldg SF:</strong> ${c.sf||'—'}</span>
+        <span><strong>Cap Rate:</strong> ${c.cap||'—'}</span>
+        <span><strong>Buyer:</strong> ${c.buyer||'—'}</span>
+        <span><strong>Seller:</strong> ${c.seller||'—'}</span>
+        <span><strong>Sale Date:</strong> ${c.date||'—'}</span>
+        <span><strong>Added By:</strong> ${c.addedby||'—'}</span>
+      </div>
+      ${c.notes?'<div class="comp-notes">'+c.notes+'</div>':''}
+      <div class="comp-date">Added: ${c.dateAdded||'—'}</div>
+    </div>`).join('');
+}
+
 function renderSummary(data){
   const has=arr=>arr.filter(x=>x!=null),avg=arr=>{const h=has(arr);return h.length?h.reduce((s,v)=>s+v,0)/h.length:null;},sm=arr=>has(arr).reduce((s,v)=>s+v,0);
   document.getElementById('summaryRow').innerHTML=[{label:'Avg vacancy',val:fmtPct(avg(data.map(m=>m.vacancy)))},{label:'Avg asking rent/SF',val:fmtDollar(avg(data.map(m=>m.rent)))},{label:'Avg sale price/SF',val:fmtDollar(avg(data.map(m=>m.ppsf)))},{label:'Avg cap rate',val:fmtPct(avg(data.map(m=>m.cap)))},{label:'Total sales volume',val:fmtVol(sm(data.map(m=>m.vol||0)))},{label:'Markets shown',val:data.length}].map(m=>'<div class="mc"><div class="mc-label">'+m.label+'</div><div class="mc-val">'+m.val+'</div></div>').join('');
 }
+
 function renderCharts(data){
   const top=data.slice(0,15),labels=top.map(m=>m.geo.replace(/ - .*/,'').replace(/,.*/,'').substring(0,16));
   const mk=(id,vals,color,fmt)=>{const ctx=document.getElementById(id);if(!ctx)return null;return new Chart(ctx,{type:'bar',data:{labels,datasets:[{data:vals,backgroundColor:color,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{callback:fmt,font:{size:10}}},x:{ticks:{maxRotation:50,font:{size:9}}}}}});};
@@ -134,10 +291,54 @@ function renderCharts(data){
   capChart=mk('capChart',top.map(m=>m.cap!=null?parseFloat(m.cap.toFixed(2)):null),'#C49A2B',v=>v+'%');
   absChart=mk('absChart',top.map(m=>m.absorption!=null?parseFloat((m.absorption/1e6).toFixed(2)):null),'#534AB7',v=>v+'M');
 }
-function renderTable(){
-  const data=getFiltered();renderSummary(data);renderCharts(data);
+
+function renderTable(data){
   if(!data.length){document.getElementById('tableBody').innerHTML='<tr><td colspan="14" style="padding:2rem;text-align:center;color:#888">No markets match filters.</td></tr>';return;}
   document.getElementById('tableBody').innerHTML=data.map(m=>'<tr><td class="metro">'+m.geo.replace(/ - .*/,'')+'</td><td><span class="tier-badge '+tierClass(m.tier)+'">'+tierLabel(m.tier)+'</span></td><td>'+fmtDollar(m.ppsf)+'</td><td>'+fmtDollar(m.rent)+'</td><td>'+fmtDollar(m.nnn)+'</td><td>'+fmtPct(m.vacancy)+'</td><td>'+fmtPct(m.avail)+'</td><td>'+fmtSF(m.absorption)+'</td><td>'+fmtPct(m.cap)+'</td><td>'+fmtPct(m.occ)+'</td><td>'+fmtSF(m.uc)+'</td><td>'+fmtVol(m.vol)+'</td><td>'+fmtSF(m.deliv)+'</td><td>'+trendHtml(m.rentGrowth)+'</td></tr>').join('');
+}
+
+function openModal(){document.getElementById('modalBg').classList.add('open');document.getElementById('f_date').valueAsDate=new Date();}
+function closeModal(){document.getElementById('modalBg').classList.remove('open');}
+
+async function saveComp(){
+  const comp={
+    address:document.getElementById('f_address').value.trim(),
+    market:document.getElementById('f_market').value.trim(),
+    type:document.getElementById('f_type').value,
+    price:document.getElementById('f_price').value.trim(),
+    ppsf:document.getElementById('f_ppsf').value.trim(),
+    ppacre:document.getElementById('f_ppacre').value.trim(),
+    sf:document.getElementById('f_sf').value.trim(),
+    cap:document.getElementById('f_cap').value.trim(),
+    buyer:document.getElementById('f_buyer').value.trim(),
+    seller:document.getElementById('f_seller').value.trim(),
+    date:document.getElementById('f_date').value,
+    addedby:document.getElementById('f_addedby').value.trim(),
+    notes:document.getElementById('f_notes').value.trim(),
+    dateAdded:new Date().toLocaleDateString()
+  };
+  if(!comp.address||!comp.market){alert('Address and market are required.');return;}
+  const msg=document.getElementById('savingMsg');
+  msg.style.display='inline';
+  try{
+    let sha='';
+    const existing=await fetch('https://api.github.com/repos/'+GITHUB_REPO+'/contents/'+COMPS_FILE,{headers:{Authorization:'token '+GITHUB_TOKEN}});
+    if(existing.ok){const d=await existing.json();sha=d.sha;}
+    const updated=[...allComps,comp];
+    const content=btoa(unescape(encodeURIComponent(JSON.stringify(updated,null,2))));
+    const res=await fetch('https://api.github.com/repos/'+GITHUB_REPO+'/contents/'+COMPS_FILE,{
+      method:'PUT',
+      headers:{Authorization:'token '+GITHUB_TOKEN,'Content-Type':'application/json'},
+      body:JSON.stringify({message:'Add comp: '+comp.address,content,sha})
+    });
+    if(!res.ok)throw new Error('GitHub save failed');
+    allComps=updated;
+    msg.style.display='none';
+    closeModal();
+    document.getElementById('f_address').value='';document.getElementById('f_market').value='';document.getElementById('f_price').value='';document.getElementById('f_ppsf').value='';document.getElementById('f_ppacre').value='';document.getElementById('f_sf').value='';document.getElementById('f_cap').value='';document.getElementById('f_buyer').value='';document.getElementById('f_seller').value='';document.getElementById('f_notes').value='';document.getElementById('f_addedby').value='';
+    renderAll();
+    alert('Comp saved! Search "'+comp.market+'" to see it.');
+  }catch(err){msg.style.display='none';alert('Error saving: '+err.message);}
 }
 </script>
 </body>
