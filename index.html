@@ -297,4 +297,46 @@ function renderCharts(data){
 }
 function renderTable(data){
   if(!data.length){document.getElementById('tableBody').innerHTML='<tr><td colspan="14" style="padding:2rem;text-align:center;color:#888">No markets match filters.</td></tr>';return;}
-  document.getElementById('tableBody').innerHTML=data.map(m=>'<tr><td class="metro">'+m.geo.replace(/ - .*/,'')+'</td><td><span class="tier-badge '+tierClass(m.tier)+'">'+tierLabel(m.tier)+'</span></td><td>'+fmtDollar(m.ppsf)+'</td><td>'+fmtDollar(m.rent)+'</td><td>'+fmtDollar(m.nnn)+'</td><td>'+fmtPct(m.vacancy)+'</td><td>'+fmtPct(m.avail)+'</td><td>'+fmtSF(m.absorption)+'</td><td>'+fmtPct(m.cap)+'</td><td>'+fmtPct(m.occ)+'</td><td>'+fmtSF(m.uc)+'</td><td>'+fmtVol(m.vol)+
+  document.getElementById('tableBody').innerHTML=data.map(m=>'<tr><td class="metro">'+m.geo.replace(/ - .*/,'')+'</td><td><span class="tier-badge '+tierClass(m.tier)+'">'+tierLabel(m.tier)+'</span></td><td>'+fmtDollar(m.ppsf)+'</td><td>'+fmtDollar(m.rent)+'</td><td>'+fmtDollar(m.nnn)+'</td><td>'+fmtPct(m.vacancy)+'</td><td>'+fmtPct(m.avail)+'</td><td>'+fmtSF(m.absorption)+'</td><td>'+fmtPct(m.cap)+'</td><td>'+fmtPct(m.occ)+'</td><td>'+fmtSF(m.uc)+'</td><td>'+fmtVol(m.vol)+'</td><td>'+fmtSF(m.deliv)+'</td><td>'+trendHtml(m.rentGrowth)+'</td></tr>').join('');
+}
+function openModal(){document.getElementById('modalBg').classList.add('open');document.getElementById('f_date').valueAsDate=new Date();}
+function closeModal(){document.getElementById('modalBg').classList.remove('open');}
+async function saveComp(){
+  const comp={
+    address:document.getElementById('f_address').value.trim(),
+    market:document.getElementById('f_market').value.trim(),
+    type:document.getElementById('f_type').value,
+    price:document.getElementById('f_price').value.trim(),
+    ppsf:document.getElementById('f_ppsf').value.trim(),
+    ppacre:document.getElementById('f_ppacre').value.trim(),
+    sf:document.getElementById('f_sf').value.trim(),
+    lotsize:document.getElementById('f_lotsize').value.trim(),
+    cap:document.getElementById('f_cap').value.trim(),
+    rentpsf:document.getElementById('f_rentpsf').value.trim(),
+    rentacre:document.getElementById('f_rentacre').value.trim(),
+    date:document.getElementById('f_date').value,
+    buyer:document.getElementById('f_buyer').value.trim(),
+    seller:document.getElementById('f_seller').value.trim(),
+    addedby:document.getElementById('f_addedby').value.trim(),
+    notes:document.getElementById('f_notes').value.trim(),
+    dateAdded:new Date().toLocaleDateString()
+  };
+  if(!comp.address||!comp.market){alert('Address and market are required.');return;}
+  const msg=document.getElementById('savingMsg');msg.style.display='inline';
+  try{
+    let sha='';
+    const existing=await fetch('https://api.github.com/repos/'+GITHUB_REPO+'/contents/'+COMPS_FILE,{headers:{Authorization:'token '+GITHUB_TOKEN}});
+    if(existing.ok){const d=await existing.json();sha=d.sha;}
+    const updated=[...allComps,comp];
+    const content=btoa(unescape(encodeURIComponent(JSON.stringify(updated,null,2))));
+    const res=await fetch('https://api.github.com/repos/'+GITHUB_REPO+'/contents/'+COMPS_FILE,{method:'PUT',headers:{Authorization:'token '+GITHUB_TOKEN,'Content-Type':'application/json'},body:JSON.stringify({message:'Add comp: '+comp.address,content,sha})});
+    if(!res.ok)throw new Error('GitHub save failed — check token');
+    allComps=updated;msg.style.display='none';closeModal();
+    ['f_address','f_market','f_price','f_ppsf','f_ppacre','f_sf','f_lotsize','f_cap','f_rentpsf','f_rentacre','f_buyer','f_seller','f_addedby','f_notes'].forEach(id=>document.getElementById(id).value='');
+    renderAll();
+    alert('Comp saved. Search "'+comp.market+'" to see it.');
+  }catch(err){msg.style.display='none';alert('Error: '+err.message);}
+}
+</script>
+</body>
+</html>
