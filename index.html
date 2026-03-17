@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ISB Industrial Market Intelligence Dashboard</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--navy:#0B1F3A;--gold:#C49A2B;--blue:#185FA5;--blue-light:#E6F1FB;--bg:#F7F6F3;--surface:#FFFFFF;--border:rgba(0,0,0,0.12);--border-med:rgba(0,0,0,0.20);--text:#1A1A1A;--text-3:#888780;--radius:8px;--radius-lg:12px}
@@ -13,7 +15,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .topbar-logo{font-size:15px;font-weight:600}.topbar-logo span{color:var(--gold)}
 .topbar-tag{font-size:11px;color:rgba(255,255,255,0.45)}
 .topbar-period{font-size:12px;background:var(--gold);color:var(--navy);padding:3px 10px;border-radius:20px;font-weight:600}
+.tabs{background:var(--navy);display:flex;padding:0 2rem;border-top:1px solid rgba(255,255,255,0.1)}
+.tab{padding:10px 20px;font-size:13px;font-weight:500;color:rgba(255,255,255,0.5);cursor:pointer;border-bottom:2px solid transparent}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+.tab:hover{color:#fff}
 .page{max-width:1400px;margin:0 auto;padding:1.5rem 2rem 4rem}
+.tab-content{display:none}.tab-content.active{display:block}
 .loading{text-align:center;padding:4rem;color:var(--text-3);font-size:14px}
 .summary-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:1.25rem}
 .mc{background:var(--surface);border-radius:var(--radius);padding:1rem 1.1rem;border:0.5px solid var(--border)}
@@ -24,6 +31,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .controls input{min-width:200px}
 .btn-gold{height:36px;padding:0 16px;background:var(--gold);color:var(--navy);border:none;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer}
 .btn-navy{height:36px;padding:0 16px;background:var(--navy);color:#fff;border:none;border-radius:var(--radius);font-size:13px;font-weight:500;cursor:pointer}
+.btn-outline{height:36px;padding:0 16px;background:transparent;color:var(--navy);border:0.5px solid var(--border-med);border-radius:var(--radius);font-size:13px;cursor:pointer}
 .table-wrap{overflow-x:auto;border:0.5px solid var(--border);border-radius:var(--radius-lg);background:var(--surface);margin-bottom:1.5rem}
 table{width:100%;border-collapse:collapse;font-size:12.5px}
 thead th{text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:var(--text-3);border-bottom:1px solid var(--border);white-space:nowrap;background:#FAFAF8;text-transform:uppercase;letter-spacing:0.3px}
@@ -41,25 +49,36 @@ td.metro{font-weight:500;max-width:220px;white-space:normal;color:var(--navy)}
 .footer{font-size:11px;color:var(--text-3);margin-top:1rem;padding-top:1rem;border-top:0.5px solid var(--border)}
 .footer strong{color:var(--gold)}
 .comps-section{margin-bottom:2rem}
-.comps-title{font-size:15px;font-weight:600;color:var(--navy);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--gold);display:flex;align-items:center;justify-content:space-between}
+.comps-title{font-size:15px;font-weight:600;color:var(--navy);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--gold);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
 .comp-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.25rem;margin-bottom:10px}
-.comp-card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px}
+.comp-card.selected{border-color:var(--gold);border-width:1.5px}
+.comp-card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px;gap:8px}
+.comp-card-left{display:flex;align-items:flex-start;gap:10px;flex:1}
+.comp-checkbox{margin-top:3px;width:16px;height:16px;cursor:pointer;accent-color:var(--navy)}
 .comp-address{font-size:14px;font-weight:600;color:var(--navy)}
-.comp-actions{display:flex;gap:6px;flex-shrink:0;margin-left:12px}
-.comp-meta{display:flex;flex-wrap:wrap;gap:10px 20px;font-size:12px;color:var(--text-3)}
+.comp-actions{display:flex;gap:6px;flex-shrink:0}
+.comp-meta{display:flex;flex-wrap:wrap;gap:10px 20px;font-size:12px;color:var(--text-3);margin-left:26px}
 .comp-meta span strong{color:var(--text)}
-.comp-notes{font-size:12px;color:var(--text-3);margin-top:6px;font-style:italic}
-.comp-date{font-size:11px;color:var(--text-3);margin-top:4px}
+.comp-notes{font-size:12px;color:var(--text-3);margin-top:6px;font-style:italic;margin-left:26px}
+.comp-date{font-size:11px;color:var(--text-3);margin-top:4px;margin-left:26px}
 .btn-edit{padding:4px 12px;background:var(--blue-light);color:var(--blue);border:none;border-radius:var(--radius);font-size:12px;cursor:pointer;font-weight:500}
 .btn-del{padding:4px 12px;background:#FCEBEB;color:#A32D2D;border:none;border-radius:var(--radius);font-size:12px;cursor:pointer;font-weight:500}
-.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:flex-start;justify-content:center;overflow-y:auto;padding:2rem 1rem}
+.export-bar{display:none;background:var(--navy);color:#fff;padding:12px 16px;border-radius:var(--radius-lg);margin-bottom:1rem;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.export-bar.visible{display:flex}
+.export-bar span{font-size:13px}
+.map-container{border-radius:var(--radius-lg);overflow:hidden;border:0.5px solid var(--border);margin-bottom:1.5rem}
+#mainMap{height:600px;width:100%}
+.map-controls{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:1rem;align-items:center}
+.map-legend{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:1rem;background:var(--surface);padding:10px 16px;border-radius:var(--radius);border:0.5px solid var(--border)}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-3)}
+.legend-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:2000;align-items:flex-start;justify-content:center;overflow-y:auto;padding:2rem 1rem}
 .modal-bg.open{display:flex}
 .modal{background:var(--surface);border-radius:var(--radius-lg);padding:2rem;width:100%;max-width:620px}
 .modal h2{font-size:16px;font-weight:600;color:var(--navy);margin-bottom:1.25rem}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
 .form-group{display:flex;flex-direction:column;gap:4px}
 .form-group.full{grid-column:1/-1}
-.form-group.third{grid-column:span 1}
 .form-group label{font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.4px}
 .form-group input,.form-group select,.form-group textarea{font-size:13px;padding:7px 10px;border-radius:var(--radius);border:0.5px solid var(--border-med);background:var(--bg);color:var(--text);outline:none}
 .form-group textarea{height:70px;resize:vertical}
@@ -71,6 +90,13 @@ td.metro{font-weight:500;max-width:220px;white-space:normal;color:var(--navy)}
 .market-row:last-child{border-bottom:none}
 .market-name{flex:1;font-size:13px;font-weight:500;color:var(--navy)}
 .market-tier{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600}
+@media print{
+  .topbar,.tabs,.controls,.export-bar,.comp-actions,.btn-gold,.btn-navy,.btn-outline{display:none!important}
+  .print-header{display:block!important}
+  body{background:#fff}
+  .print-only{display:block!important}
+}
+.print-header{display:none}
 </style>
 </head>
 <body>
@@ -81,9 +107,14 @@ td.metro{font-weight:500;max-width:220px;white-space:normal;color:var(--navy)}
     <span class="topbar-tag">Industrial Storage Brokers</span>
   </div>
 </div>
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('dashboard')">Dashboard</div>
+  <div class="tab" onclick="switchTab('map')">Map View</div>
+</div>
 <div class="page">
   <div class="loading" id="loadingMsg">Loading market data...</div>
-  <div id="dashContent" style="display:none">
+
+  <div id="tab-dashboard" class="tab-content active">
     <div class="summary-row" id="summaryRow"></div>
     <div class="controls">
       <input type="text" id="searchBox" placeholder="Search metro..." oninput="renderAll()">
@@ -107,10 +138,20 @@ td.metro{font-weight:500;max-width:220px;white-space:normal;color:var(--navy)}
       <button class="btn-navy" onclick="openMarketModal()">Manage Markets</button>
     </div>
 
+    <div id="exportBar" class="export-bar">
+      <span id="exportCount">0 comps selected</span>
+      <div style="display:flex;gap:8px">
+        <button class="btn-outline" style="color:#fff;border-color:rgba(255,255,255,0.3)" onclick="clearSelection()">Clear</button>
+        <button class="btn-gold" onclick="exportSelected()">Export / Print Selected</button>
+      </div>
+    </div>
+
     <div id="compsSection" class="comps-section" style="display:none">
       <div class="comps-title">
-        <span>Traded Comps — <span id="compsMarketLabel"></span></span>
-        <span id="compsCount" style="font-size:12px;font-weight:400;color:var(--text-3)"></span>
+        <span>Traded Comps — <span id="compsMarketLabel"></span> <span id="compsCount" style="font-size:12px;font-weight:400;color:var(--text-3)"></span></span>
+        <div style="display:flex;gap:8px">
+          <button class="btn-outline" onclick="selectAllComps()" style="height:30px;font-size:12px">Select All</button>
+        </div>
       </div>
       <div id="compsList"></div>
     </div>
@@ -132,6 +173,32 @@ td.metro{font-weight:500;max-width:220px;white-space:normal;color:var(--navy)}
       <div class="chart-card"><h3>Net absorption by market</h3><div style="position:relative;height:280px"><canvas id="absChart"></canvas></div></div>
     </div>
     <div class="footer" id="footerNote"></div>
+  </div>
+
+  <div id="tab-map" class="tab-content">
+    <div class="map-controls">
+      <input type="text" id="mapSearch" placeholder="Filter comps by market..." oninput="filterMapComps()" style="font-size:13px;padding:7px 12px;height:36px;border-radius:var(--radius);border:0.5px solid var(--border-med);background:var(--surface);color:var(--text);outline:none;min-width:220px">
+      <select id="mapTypeFilter" onchange="filterMapComps()" style="font-size:13px;padding:7px 12px;height:36px;border-radius:var(--radius);border:0.5px solid var(--border-med);background:var(--surface);color:var(--text);outline:none">
+        <option value="">All asset types</option>
+        <option>IOS</option>
+        <option>Traditional Warehouse</option>
+        <option>Small Bay / Flex</option>
+        <option>Truck Parking</option>
+        <option>Self / Mini Storage</option>
+        <option>RV &amp; Boat Storage</option>
+        <option>Cold Storage</option>
+        <option>Land Development</option>
+        <option>Other</option>
+      </select>
+      <button class="btn-navy" onclick="toggleSatellite()" id="satBtn">Street View</button>
+      <button class="btn-outline" onclick="fitAllComps()">Fit All Comps</button>
+      <span id="mapCompCount" style="font-size:12px;color:var(--text-3)"></span>
+    </div>
+    <div class="map-legend" id="mapLegend"></div>
+    <div class="map-container">
+      <div id="mainMap"></div>
+    </div>
+    <p style="font-size:12px;color:var(--text-3)">Pins show comps you have entered. Add comps from the Dashboard tab and they will appear here automatically. Click any pin for full comp details.</p>
   </div>
 </div>
 
@@ -174,20 +241,18 @@ td.metro{font-weight:500;max-width:220px;white-space:normal;color:var(--navy)}
 <div class="modal-bg" id="marketModalBg">
   <div class="modal" style="max-width:700px">
     <h2>Manage Markets</h2>
-    <p style="font-size:12px;color:var(--text-3);margin-bottom:1rem">Add, edit, or delete markets. Leave data fields blank if unknown — they'll show as — in the table.</p>
-    <div id="marketList" style="max-height:320px;overflow-y:auto;margin-bottom:1rem;border:0.5px solid var(--border);border-radius:var(--radius);padding:0 12px"></div>
+    <p style="font-size:12px;color:var(--text-3);margin-bottom:1rem">Add, edit, or delete markets. Leave data fields blank if unknown.</p>
+    <div id="marketList" style="max-height:280px;overflow-y:auto;margin-bottom:1rem;border:0.5px solid var(--border);border-radius:var(--radius);padding:0 12px"></div>
     <div style="background:var(--bg);border-radius:var(--radius-lg);padding:1.25rem;border:0.5px solid var(--border)">
       <div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:12px" id="mFormTitle">Add New Market</div>
       <input type="hidden" id="m_editGeo" value="">
       <div class="form-grid">
-        <div class="form-group full"><label>Market Name</label><input type="text" id="m_geo" placeholder="e.g. Birmingham, AL - USA"></div>
+        <div class="form-group full"><label>Market Name</label><input type="text" id="m_geo" placeholder="e.g. Savannah, GA"></div>
         <div class="form-group"><label>Tier</label>
           <select id="m_tier">
-            <option value="1">Tier 1 — Gateway</option>
-            <option value="2">Tier 2 — High-Growth</option>
-            <option value="3">Tier 3 — Secondary</option>
-            <option value="4">Tier 4 — Regional</option>
-            <option value="5">Tier 5 — Emerging</option>
+            <option value="1">Tier 1 — Gateway</option><option value="2">Tier 2 — High-Growth</option>
+            <option value="3">Tier 3 — Secondary</option><option value="4">Tier 4 — Regional</option>
+            <option value="5" selected>Tier 5 — Emerging</option>
           </select>
         </div>
         <div class="form-group"><label>Sale Price / SF</label><input type="text" id="m_ppsf" placeholder="$145"></div>
@@ -217,6 +282,18 @@ const GITHUB_REPO='philmaisano/isb-dashboard';
 const COMPS_FILE='comps.json';
 const MARKETS_FILE='markets_custom.json';
 
+const TYPE_COLORS={
+  'IOS':'#D85A30',
+  'Traditional Warehouse':'#185FA5',
+  'Small Bay / Flex':'#1D9E75',
+  'Truck Parking':'#534AB7',
+  'Self / Mini Storage':'#C49A2B',
+  'RV & Boat Storage':'#D4537E',
+  'Cold Storage':'#0F6E56',
+  'Land Development':'#BA7517',
+  'Other':'#888780'
+};
+
 function fmtSF(n){if(n==null)return'—';if(Math.abs(n)>=1e6)return(n/1e6).toFixed(1)+'M SF';if(Math.abs(n)>=1000)return(n/1000).toFixed(0)+'K SF';return n+' SF';}
 function fmtPct(n){if(n==null)return'—';return n.toFixed(1)+'%';}
 function fmtDollar(n){if(n==null)return'—';return'$'+n.toFixed(2);}
@@ -226,20 +303,111 @@ function tierClass(t){return["","t1","t2","t3","t4","t5"][t]||'';}
 function trendHtml(v){if(v==null)return'<span class="trend-flat">—</span>';if(v>0.5)return'<span class="trend-up">↑ '+v.toFixed(1)+'%</span>';if(v<-0.5)return'<span class="trend-dn">↓ '+v.toFixed(1)+'%</span>';return'<span class="trend-flat">— '+v.toFixed(1)+'%</span>';}
 function parseNum(s){if(!s)return null;const n=parseFloat(s.toString().replace(/[$,%]/g,''));return isNaN(n)?null:n;}
 
-let allData=[],allComps=[],customMarkets=[],vacChart=null,rentChart=null,capChart=null,absChart=null;
+let allData=[],allComps=[],customMarkets=[],selectedComps=new Set();
+let vacChart=null,rentChart=null,capChart=null,absChart=null;
+let map=null,satelliteLayer=null,streetLayer=null,isSatellite=false,markers=[];
+
+function switchTab(tab){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelector('.tab[onclick*="'+tab+'"]').classList.add('active');
+  document.getElementById('tab-'+tab).classList.add('active');
+  if(tab==='map'){
+    setTimeout(()=>{
+      if(!map) initMap();
+      else map.invalidateSize();
+      renderMapComps();
+    },100);
+  }
+}
+
+function initMap(){
+  map=L.map('mainMap',{center:[38,-96],zoom:4});
+  streetLayer=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'OpenStreetMap'});
+  satelliteLayer=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Esri'});
+  streetLayer.addTo(map);
+  renderMapLegend();
+}
+
+function toggleSatellite(){
+  if(!map)return;
+  if(isSatellite){map.removeLayer(satelliteLayer);streetLayer.addTo(map);document.getElementById('satBtn').textContent='Street View';isSatellite=false;}
+  else{map.removeLayer(streetLayer);satelliteLayer.addTo(map);document.getElementById('satBtn').textContent='Satellite View';isSatellite=true;}
+}
+
+function renderMapLegend(){
+  document.getElementById('mapLegend').innerHTML=Object.entries(TYPE_COLORS).map(([type,color])=>
+    '<div class="legend-item"><div class="legend-dot" style="background:'+color+'"></div>'+type+'</div>'
+  ).join('');
+}
+
+async function geocodeAddress(address){
+  try{
+    const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&q='+encodeURIComponent(address)+'&limit=1',{headers:{'User-Agent':'ISB-Dashboard'}});
+    const d=await r.json();
+    if(d&&d[0])return{lat:parseFloat(d[0].lat),lng:parseFloat(d[0].lon)};
+  }catch(e){}
+  return null;
+}
+
+function makePopupHtml(c){
+  return '<div style="min-width:220px;max-width:300px;font-family:system-ui,sans-serif;font-size:12px">'+
+    '<div style="font-weight:700;font-size:13px;color:#0B1F3A;margin-bottom:6px">'+c.address+'</div>'+
+    '<div style="display:inline-block;background:'+(TYPE_COLORS[c.type]||'#888')+'22;color:'+(TYPE_COLORS[c.type]||'#888')+';font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;margin-bottom:8px">'+c.type+'</div>'+
+    '<table style="width:100%;border-collapse:collapse">'+
+    [['Sale Price',c.price],['Price/SF',c.ppsf],['Price/Acre',c.ppacre],['Bldg SF',c.sf],['Lot Size',c.lotsize],['Cap Rate',c.cap],['Rent/SF',c.rentpsf],['Rent/Acre',c.rentacre],['Buyer',c.buyer],['Seller',c.seller],['Sale Date',c.date],['Added By',c.addedby]]
+    .filter(([,v])=>v).map(([k,v])=>'<tr><td style="color:#888;padding:2px 0;padding-right:8px">'+k+'</td><td style="font-weight:500;color:#1A1A1A;padding:2px 0">'+v+'</td></tr>').join('')+
+    '</table>'+
+    (c.notes?'<div style="margin-top:6px;font-style:italic;color:#888">'+c.notes+'</div>':'')+
+    '<div style="margin-top:4px;font-size:10px;color:#aaa">Added: '+c.dateAdded+'</div></div>';
+}
+
+let geocodeCache={};
+async function renderMapComps(){
+  if(!map)return;
+  markers.forEach(m=>map.removeLayer(m));
+  markers=[];
+  const s=document.getElementById('mapSearch').value.toLowerCase();
+  const t=document.getElementById('mapTypeFilter').value;
+  const filtered=allComps.filter(c=>{
+    if(s&&!(c.market||'').toLowerCase().includes(s)&&!(c.address||'').toLowerCase().includes(s))return false;
+    if(t&&c.type!==t)return false;
+    return true;
+  });
+  document.getElementById('mapCompCount').textContent=filtered.length+' comp'+(filtered.length===1?'':'s')+' shown';
+  for(const c of filtered){
+    if(!c.address)continue;
+    let pos=geocodeCache[c.address];
+    if(!pos){pos=await geocodeAddress(c.address);if(pos)geocodeCache[c.address]=pos;}
+    if(!pos)continue;
+    const color=TYPE_COLORS[c.type]||'#888780';
+    const icon=L.divIcon({className:'',html:'<div style="width:14px;height:14px;border-radius:50%;background:'+color+';border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.4)"></div>',iconSize:[14,14],iconAnchor:[7,7]});
+    const marker=L.marker([pos.lat,pos.lng],{icon}).addTo(map);
+    marker.bindPopup(makePopupHtml(c),{maxWidth:320});
+    markers.push(marker);
+  }
+  if(markers.length>0)fitAllComps();
+}
+
+function fitAllComps(){
+  if(!map||!markers.length)return;
+  const group=L.featureGroup(markers);
+  map.fitBounds(group.getBounds().pad(0.1));
+}
+
+function filterMapComps(){renderMapComps();}
 
 Promise.all([
   fetch('data.json').then(r=>r.json()),
   fetch('comps.json?t='+Date.now()).then(r=>r.json()).catch(()=>[]),
   fetch('markets_custom.json?t='+Date.now()).then(r=>r.json()).catch(()=>[])
 ]).then(([markets,comps,custom])=>{
-  allData=[...markets,...custom];
-  allComps=comps;
-  customMarkets=custom;
+  allData=[...markets,...custom.map(m=>({...m,_custom:true}))];
+  allComps=comps;customMarkets=custom;
   const latest=markets[0]?.period||'';
   if(latest){document.getElementById('topPeriod').textContent=latest;document.getElementById('topPeriod').style.display='inline-block';}
   document.getElementById('loadingMsg').style.display='none';
-  document.getElementById('dashContent').style.display='block';
+  document.getElementById('tab-dashboard').style.display='block';
   document.getElementById('footerNote').innerHTML='<strong>Source:</strong> CoStar — '+markets.length+' markets + '+custom.length+' custom. '+comps.length+' comps on file.';
   renderAll();
 }).catch(err=>{document.getElementById('loadingMsg').innerHTML='<p style="color:#A32D2D;font-size:13px">Error: '+err.message+'</p>';});
@@ -260,6 +428,7 @@ function renderAll(){
   renderSummary(markets);renderCharts(markets);renderTable(markets);
   renderComps(getFilteredComps());
 }
+
 function renderComps(comps){
   const sec=document.getElementById('compsSection');
   const s=getSearch();
@@ -268,16 +437,18 @@ function renderComps(comps){
   document.getElementById('compsMarketLabel').textContent=s.charAt(0).toUpperCase()+s.slice(1);
   document.getElementById('compsCount').textContent=comps.length+' comp'+(comps.length===1?'':'s');
   document.getElementById('compsList').innerHTML=comps.sort((a,b)=>new Date(b.dateAdded)-new Date(a.dateAdded)).map(c=>`
-    <div class="comp-card">
+    <div class="comp-card${selectedComps.has(c._idx)?' selected':''}" id="comp-card-${c._idx}">
       <div class="comp-card-header">
-        <div class="comp-address">${c.address||'—'}</div>
+        <div class="comp-card-left">
+          <input type="checkbox" class="comp-checkbox" ${selectedComps.has(c._idx)?'checked':''} onchange="toggleSelect(${c._idx},this.checked)">
+          <div class="comp-address">${c.address||'—'} <span style="font-size:11px;font-weight:400;padding:2px 8px;border-radius:20px;background:${TYPE_COLORS[c.type]||'#888'}22;color:${TYPE_COLORS[c.type]||'#888'}">${c.type||''}</span></div>
+        </div>
         <div class="comp-actions">
           <button class="btn-edit" onclick="editComp(${c._idx})">Edit</button>
           <button class="btn-del" onclick="deleteComp(${c._idx})">Delete</button>
         </div>
       </div>
       <div class="comp-meta">
-        <span><strong>Type:</strong> ${c.type||'—'}</span>
         <span><strong>Sale Price:</strong> ${c.price||'—'}</span>
         <span><strong>Price/SF:</strong> ${c.ppsf||'—'}</span>
         <span><strong>Price/Acre:</strong> ${c.ppacre||'—'}</span>
@@ -294,7 +465,102 @@ function renderComps(comps){
       ${c.notes?'<div class="comp-notes">'+c.notes+'</div>':''}
       <div class="comp-date">Added: ${c.dateAdded||'—'}</div>
     </div>`).join('');
+  updateExportBar();
 }
+
+function toggleSelect(idx,checked){
+  if(checked)selectedComps.add(idx);else selectedComps.delete(idx);
+  const card=document.getElementById('comp-card-'+idx);
+  if(card){if(checked)card.classList.add('selected');else card.classList.remove('selected');}
+  updateExportBar();
+}
+function selectAllComps(){
+  getFilteredComps().forEach(c=>selectedComps.add(c._idx));
+  renderComps(getFilteredComps());
+}
+function clearSelection(){selectedComps.clear();renderComps(getFilteredComps());}
+function updateExportBar(){
+  const bar=document.getElementById('exportBar');
+  const count=selectedComps.size;
+  if(count>0){bar.classList.add('visible');document.getElementById('exportCount').textContent=count+' comp'+(count===1?'':'s')+' selected';}
+  else bar.classList.remove('visible');
+}
+
+function exportSelected(){
+  const selected=Array.from(selectedComps).map(i=>allComps[i]).filter(Boolean);
+  if(!selected.length){alert('No comps selected.');return;}
+  const s=getSearch();
+  const market=allData.find(m=>m.geo.toLowerCase().includes(s));
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>ISB Comp Report</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fff;color:#1A1A1A;padding:0}
+    .cover{background:#0B1F3A;padding:40px 48px;display:flex;align-items:center;justify-content:space-between}
+    .cover-right{text-align:right;color:rgba(255,255,255,0.6);font-size:13px}
+    .cover-title{color:#C49A2B;font-size:22px;font-weight:700;margin-top:4px}
+    .cover-date{color:rgba(255,255,255,0.5);font-size:12px;margin-top:4px}
+    .market-section{background:#F7F6F3;padding:24px 48px;border-bottom:3px solid #C49A2B}
+    .market-title{font-size:18px;font-weight:700;color:#0B1F3A;margin-bottom:12px}
+    .market-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}
+    .mstat{background:#fff;border-radius:8px;padding:10px 14px;border:0.5px solid rgba(0,0,0,0.1)}
+    .mstat-label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:3px}
+    .mstat-val{font-size:18px;font-weight:700;color:#0B1F3A}
+    .comps-wrap{padding:24px 48px}
+    .comps-header{font-size:15px;font-weight:700;color:#0B1F3A;margin-bottom:16px;padding-bottom:8px;border-bottom:2px solid #C49A2B}
+    .comp{background:#fff;border:0.5px solid rgba(0,0,0,0.12);border-radius:10px;padding:16px 20px;margin-bottom:14px;break-inside:avoid}
+    .comp-addr{font-size:14px;font-weight:700;color:#0B1F3A;margin-bottom:4px}
+    .comp-type{display:inline-block;font-size:11px;font-weight:600;padding:2px 10px;border-radius:20px;background:#E6F1FB;color:#185FA5;margin-bottom:10px}
+    .comp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px 16px}
+    .comp-field{font-size:12px}.comp-field span{color:#888}
+    .comp-notes-text{font-size:12px;color:#888;font-style:italic;margin-top:8px;padding-top:8px;border-top:0.5px solid rgba(0,0,0,0.08)}
+    .footer-bar{background:#0B1F3A;padding:16px 48px;display:flex;justify-content:space-between;align-items:center;margin-top:32px}
+    .footer-bar span{color:rgba(255,255,255,0.5);font-size:11px}
+    @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+  </style></head><body>
+  <div class="cover">
+    <div>
+      <img src="https://raw.githubusercontent.com/philmaisano/isb-dashboard/main/24_ISB_logo_horizontal.png" style="height:50px;object-fit:contain" onerror="this.style.display='none'">
+      <div class="cover-title">Industrial Comp Report</div>
+      <div class="cover-date">Prepared ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}</div>
+    </div>
+    <div class="cover-right">
+      <div>industrialstoragebrokers.com</div>
+      <div style="color:#C49A2B;font-weight:600;margin-top:4px">${selected.length} Comp${selected.length===1?'':'s'}</div>
+    </div>
+  </div>
+  ${market?`<div class="market-section">
+    <div class="market-title">${market.geo.replace(/ - .*/,'')} — Market Overview</div>
+    <div class="market-grid">
+      ${market.vacancy!=null?'<div class="mstat"><div class="mstat-label">Vacancy</div><div class="mstat-val">'+market.vacancy.toFixed(1)+'%</div></div>':''}
+      ${market.rent!=null?'<div class="mstat"><div class="mstat-label">Asking Rent/SF</div><div class="mstat-val">$'+market.rent.toFixed(2)+'</div></div>':''}
+      ${market.ppsf!=null?'<div class="mstat"><div class="mstat-label">Sale Price/SF</div><div class="mstat-val">$'+market.ppsf.toFixed(2)+'</div></div>':''}
+      ${market.cap!=null?'<div class="mstat"><div class="mstat-label">Cap Rate</div><div class="mstat-val">'+market.cap.toFixed(2)+'%</div></div>':''}
+      ${market.occ!=null?'<div class="mstat"><div class="mstat-label">Occupancy</div><div class="mstat-val">'+market.occ.toFixed(1)+'%</div></div>':''}
+      ${market.absorption!=null?'<div class="mstat"><div class="mstat-label">Net Absorption</div><div class="mstat-val">'+(market.absorption>=1e6?(market.absorption/1e6).toFixed(1)+'M':(market.absorption/1000).toFixed(0)+'K')+' SF</div></div>':''}
+    </div>
+  </div>`:''}
+  <div class="comps-wrap">
+    <div class="comps-header">${selected.length} Selected Comp${selected.length===1?'':'s'}</div>
+    ${selected.map(c=>`
+    <div class="comp">
+      <div class="comp-addr">${c.address||'—'}</div>
+      <div class="comp-type">${c.type||'—'}</div>
+      <div class="comp-grid">
+        ${[['Sale Price',c.price],['Price/SF',c.ppsf],['Price/Acre',c.ppacre],['Building SF',c.sf],['Lot Size',c.lotsize],['Cap Rate',c.cap],['Rent/SF',c.rentpsf],['Rent/Acre',c.rentacre],['Buyer',c.buyer],['Seller',c.seller],['Sale Date',c.date],['Added By',c.addedby]].filter(([,v])=>v).map(([k,v])=>'<div class="comp-field"><span>'+k+':</span> '+v+'</div>').join('')}
+      </div>
+      ${c.notes?'<div class="comp-notes-text">'+c.notes+'</div>':''}
+    </div>`).join('')}
+  </div>
+  <div class="footer-bar">
+    <span>Industrial Storage Brokers — Confidential</span>
+    <span>Generated ${new Date().toLocaleDateString()}</span>
+  </div>
+  <script>window.onload=()=>window.print()<\/script>
+  </body></html>`);
+  w.document.close();
+}
+
 function renderSummary(data){
   const has=arr=>arr.filter(x=>x!=null),avg=arr=>{const h=has(arr);return h.length?h.reduce((s,v)=>s+v,0)/h.length:null;};
   document.getElementById('summaryRow').innerHTML=[
@@ -333,7 +599,7 @@ function editComp(idx){openCompModal(idx);}
 async function deleteComp(idx){
   if(!confirm('Delete this comp?'))return;
   const updated=allComps.filter((_,i)=>i!==idx);
-  if(await pushFile(COMPS_FILE,updated,'Delete comp')){allComps=updated;renderAll();}
+  if(await pushFile(COMPS_FILE,updated,'Delete comp')){allComps=updated;selectedComps.delete(idx);renderAll();}
 }
 async function saveComp(){
   const editIdx=parseInt(document.getElementById('f_editIndex').value);
@@ -364,13 +630,10 @@ async function saveComp(){
   if(await pushFile(COMPS_FILE,updated,editIdx>=0?'Edit comp':'Add comp: '+comp.address)){
     allComps=updated;msg.style.display='none';closeCompModal();renderAll();
     if(editIdx<0)alert('Comp saved. Search "'+comp.market+'" to see it.');
-  } else {msg.style.display='none';}
+  }else{msg.style.display='none';}
 }
 
-function openMarketModal(){
-  renderMarketList();
-  document.getElementById('marketModalBg').classList.add('open');
-}
+function openMarketModal(){renderMarketList();document.getElementById('marketModalBg').classList.add('open');}
 function closeMarketModal(){document.getElementById('marketModalBg').classList.remove('open');}
 function resetMarketForm(){
   document.getElementById('m_editGeo').value='';
@@ -381,38 +644,22 @@ function resetMarketForm(){
 }
 function renderMarketList(){
   const list=document.getElementById('marketList');
-  if(!customMarkets.length){list.innerHTML='<p style="font-size:12px;color:var(--text-3);padding:12px 0">No custom markets yet. Add one below.</p>';return;}
-  list.innerHTML=customMarkets.map((m,i)=>`
-    <div class="market-row">
-      <div class="market-name">${m.geo.replace(/ - .*/,'')}</div>
-      <span class="market-tier ${tierClass(m.tier)}">${tierLabel(m.tier)}</span>
-      <button class="btn-edit" onclick="editMarket(${i})">Edit</button>
-      <button class="btn-del" onclick="deleteMarket(${i})">Delete</button>
-    </div>`).join('');
+  if(!customMarkets.length){list.innerHTML='<p style="font-size:12px;color:var(--text-3);padding:12px 0">No custom markets yet.</p>';return;}
+  list.innerHTML=customMarkets.map((m,i)=>`<div class="market-row"><div class="market-name">${m.geo.replace(/ - .*/,'')}</div><span class="market-tier ${tierClass(m.tier)}">${tierLabel(m.tier)}</span><button class="btn-edit" onclick="editMarket(${i})">Edit</button><button class="btn-del" onclick="deleteMarket(${i})">Delete</button></div>`).join('');
 }
 function editMarket(idx){
   const m=customMarkets[idx];
   document.getElementById('m_editGeo').value=m.geo;
   document.getElementById('mFormTitle').textContent='Edit: '+m.geo.replace(/ - .*/,'');
   document.getElementById('mCancelEdit').style.display='inline-block';
-  document.getElementById('m_geo').value=m.geo;
+  ['geo','ppsf','rent','vacancy','cap','occ','absorption','deliv','rentGrowth'].forEach(f=>{const el=document.getElementById('m_'+f);if(el)el.value=m[f]||'';});
   document.getElementById('m_tier').value=m.tier||5;
-  document.getElementById('m_ppsf').value=m.ppsf||'';
-  document.getElementById('m_rent').value=m.rent||'';
-  document.getElementById('m_vacancy').value=m.vacancy||'';
-  document.getElementById('m_cap').value=m.cap||'';
-  document.getElementById('m_occ').value=m.occ||'';
-  document.getElementById('m_absorption').value=m.absorption||'';
-  document.getElementById('m_deliv').value=m.deliv||'';
-  document.getElementById('m_rentGrowth').value=m.rentGrowth||'';
 }
 async function deleteMarket(idx){
   if(!confirm('Delete this market?'))return;
   const updated=customMarkets.filter((_,i)=>i!==idx);
   if(await pushFile(MARKETS_FILE,updated,'Delete market')){
     customMarkets=updated;
-    allData=allData.filter(m=>!m._custom||customMarkets.some(c=>c.geo===m.geo));
-    allData=allData.filter(m=>!m._custom);
     allData=[...allData.filter(m=>!m._custom),...customMarkets.map(m=>({...m,_custom:true}))];
     renderAll();renderMarketList();
   }
@@ -430,8 +677,7 @@ async function saveMarket(){
     absorption:parseNum(document.getElementById('m_absorption').value),
     deliv:parseNum(document.getElementById('m_deliv').value),
     rentGrowth:parseNum(document.getElementById('m_rentGrowth').value),
-    _custom:true,
-    dateAdded:new Date().toLocaleDateString()
+    _custom:true,dateAdded:new Date().toLocaleDateString()
   };
   if(!market.geo){alert('Market name is required.');return;}
   const msg=document.getElementById('mktSavingMsg');msg.style.display='inline';
@@ -443,9 +689,9 @@ async function saveMarket(){
   }
   if(await pushFile(MARKETS_FILE,updated,editGeo?'Edit market':'Add market: '+market.geo)){
     customMarkets=updated;
-    allData=[...allData.filter(m=>!m._custom),...customMarkets];
+    allData=[...allData.filter(m=>!m._custom),...customMarkets.map(m=>({...m,_custom:true}))];
     msg.style.display='none';resetMarketForm();renderAll();renderMarketList();
-  } else {msg.style.display='none';}
+  }else{msg.style.display='none';}
 }
 
 async function pushFile(filename,data,message){
