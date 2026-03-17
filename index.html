@@ -22,7 +22,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .controls{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:1rem;align-items:center}
 .controls input,.controls select{font-size:13px;padding:7px 12px;height:36px;border-radius:var(--radius);border:0.5px solid var(--border-med);background:var(--surface);color:var(--text);outline:none}
 .controls input{min-width:200px}
-.add-comp-btn{height:36px;padding:0 16px;background:var(--gold);color:var(--navy);border:none;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;margin-left:auto}
+.btn-gold{height:36px;padding:0 16px;background:var(--gold);color:var(--navy);border:none;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer}
+.btn-navy{height:36px;padding:0 16px;background:var(--navy);color:#fff;border:none;border-radius:var(--radius);font-size:13px;font-weight:500;cursor:pointer}
 .table-wrap{overflow-x:auto;border:0.5px solid var(--border);border-radius:var(--radius-lg);background:var(--surface);margin-bottom:1.5rem}
 table{width:100%;border-collapse:collapse;font-size:12.5px}
 thead th{text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:var(--text-3);border-bottom:1px solid var(--border);white-space:nowrap;background:#FAFAF8;text-transform:uppercase;letter-spacing:0.3px}
@@ -40,20 +41,25 @@ td.metro{font-weight:500;max-width:220px;white-space:normal;color:var(--navy)}
 .footer{font-size:11px;color:var(--text-3);margin-top:1rem;padding-top:1rem;border-top:0.5px solid var(--border)}
 .footer strong{color:var(--gold)}
 .comps-section{margin-bottom:2rem}
-.comps-title{font-size:15px;font-weight:600;color:var(--navy);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--gold)}
+.comps-title{font-size:15px;font-weight:600;color:var(--navy);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--gold);display:flex;align-items:center;justify-content:space-between}
 .comp-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.25rem;margin-bottom:10px}
-.comp-address{font-size:14px;font-weight:600;color:var(--navy);margin-bottom:6px}
-.comp-meta{display:flex;flex-wrap:wrap;gap:12px 20px;font-size:12px;color:var(--text-3)}
+.comp-card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px}
+.comp-address{font-size:14px;font-weight:600;color:var(--navy)}
+.comp-actions{display:flex;gap:6px;flex-shrink:0;margin-left:12px}
+.comp-meta{display:flex;flex-wrap:wrap;gap:10px 20px;font-size:12px;color:var(--text-3)}
 .comp-meta span strong{color:var(--text)}
 .comp-notes{font-size:12px;color:var(--text-3);margin-top:6px;font-style:italic}
 .comp-date{font-size:11px;color:var(--text-3);margin-top:4px}
+.btn-edit{padding:4px 12px;background:var(--blue-light);color:var(--blue);border:none;border-radius:var(--radius);font-size:12px;cursor:pointer;font-weight:500}
+.btn-del{padding:4px 12px;background:#FCEBEB;color:#A32D2D;border:none;border-radius:var(--radius);font-size:12px;cursor:pointer;font-weight:500}
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:flex-start;justify-content:center;overflow-y:auto;padding:2rem 1rem}
 .modal-bg.open{display:flex}
-.modal{background:var(--surface);border-radius:var(--radius-lg);padding:2rem;width:100%;max-width:580px}
+.modal{background:var(--surface);border-radius:var(--radius-lg);padding:2rem;width:100%;max-width:620px}
 .modal h2{font-size:16px;font-weight:600;color:var(--navy);margin-bottom:1.25rem}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
 .form-group{display:flex;flex-direction:column;gap:4px}
 .form-group.full{grid-column:1/-1}
+.form-group.third{grid-column:span 1}
 .form-group label{font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.4px}
 .form-group input,.form-group select,.form-group textarea{font-size:13px;padding:7px 10px;border-radius:var(--radius);border:0.5px solid var(--border-med);background:var(--bg);color:var(--text);outline:none}
 .form-group textarea{height:70px;resize:vertical}
@@ -61,6 +67,10 @@ td.metro{font-weight:500;max-width:220px;white-space:normal;color:var(--navy)}
 .btn-save{padding:8px 20px;background:var(--navy);color:#fff;border:none;border-radius:var(--radius);font-size:13px;font-weight:500;cursor:pointer}
 .btn-cancel{padding:8px 20px;background:transparent;color:var(--text-3);border:0.5px solid var(--border-med);border-radius:var(--radius);font-size:13px;cursor:pointer}
 .saving-msg{font-size:12px;color:var(--text-3);margin-right:auto}
+.market-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--border)}
+.market-row:last-child{border-bottom:none}
+.market-name{flex:1;font-size:13px;font-weight:500;color:var(--navy)}
+.market-tier{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600}
 </style>
 </head>
 <body>
@@ -92,13 +102,16 @@ td.metro{font-weight:500;max-width:220px;white-space:normal;color:var(--navy)}
         <option value="vacancy">Sort: Vacancy</option>
         <option value="cap">Sort: Cap Rate</option>
         <option value="absorption">Sort: Net Absorption</option>
-        <option value="volume">Sort: Sales Volume</option>
       </select>
-      <button class="add-comp-btn" onclick="openModal()">+ Add Comp</button>
+      <button class="btn-gold" onclick="openCompModal()">+ Add Comp</button>
+      <button class="btn-navy" onclick="openMarketModal()">Manage Markets</button>
     </div>
 
     <div id="compsSection" class="comps-section" style="display:none">
-      <div class="comps-title">Traded Comps — <span id="compsMarketLabel"></span></div>
+      <div class="comps-title">
+        <span>Traded Comps — <span id="compsMarketLabel"></span></span>
+        <span id="compsCount" style="font-size:12px;font-weight:400;color:var(--text-3)"></span>
+      </div>
       <div id="compsList"></div>
     </div>
 
@@ -106,9 +119,8 @@ td.metro{font-weight:500;max-width:220px;white-space:normal;color:var(--navy)}
       <table>
         <thead><tr>
           <th>Metro</th><th>Tier</th><th>Sale Price/SF</th><th>Asking Rent/SF</th>
-          <th>NNN Rent/SF</th><th>Vacancy %</th><th>Avail %</th><th>Net Absorption</th>
-          <th>Cap Rate</th><th>Occupancy %</th><th>Under Const.</th><th>Sales Volume</th>
-          <th>Delivered SF</th><th>Rent Growth 12mo</th>
+          <th>Vacancy %</th><th>Net Absorption</th><th>Cap Rate</th>
+          <th>Occupancy %</th><th>Delivered SF</th><th>Rent Growth 12mo</th>
         </tr></thead>
         <tbody id="tableBody"></tbody>
       </table>
@@ -123,89 +135,78 @@ td.metro{font-weight:500;max-width:220px;white-space:normal;color:var(--navy)}
   </div>
 </div>
 
-<div class="modal-bg" id="modalBg">
+<div class="modal-bg" id="compModalBg">
   <div class="modal">
-    <h2>Add Traded Comp</h2>
+    <h2 id="compModalTitle">Add Traded Comp</h2>
+    <input type="hidden" id="f_editIndex" value="-1">
     <div class="form-grid">
-      <div class="form-group full">
-        <label>Address</label>
-        <input type="text" id="f_address" placeholder="123 Industrial Blvd, Dallas TX">
-      </div>
-      <div class="form-group">
-        <label>Market / Metro</label>
-        <input type="text" id="f_market" placeholder="e.g. Dallas">
-      </div>
-      <div class="form-group">
-        <label>Asset Type</label>
+      <div class="form-group full"><label>Address</label><input type="text" id="f_address" placeholder="123 Industrial Blvd, Dallas TX"></div>
+      <div class="form-group"><label>Market / Metro</label><input type="text" id="f_market" placeholder="e.g. Dallas"></div>
+      <div class="form-group"><label>Asset Type</label>
         <select id="f_type">
-          <option>IOS</option>
-          <option>Traditional Warehouse</option>
-          <option>Small Bay / Flex</option>
-          <option>Truck Parking</option>
-          <option>Self / Mini Storage</option>
-          <option>RV &amp; Boat Storage</option>
-          <option>Cold Storage</option>
-          <option>Land Development</option>
-          <option>Other</option>
+          <option>IOS</option><option>Traditional Warehouse</option><option>Small Bay / Flex</option>
+          <option>Truck Parking</option><option>Self / Mini Storage</option><option>RV &amp; Boat Storage</option>
+          <option>Cold Storage</option><option>Land Development</option><option>Other</option>
         </select>
       </div>
-      <div class="form-group">
-        <label>Sale Price</label>
-        <input type="text" id="f_price" placeholder="$4,500,000">
-      </div>
-      <div class="form-group">
-        <label>Price / SF</label>
-        <input type="text" id="f_ppsf" placeholder="$145">
-      </div>
-      <div class="form-group">
-        <label>Price / Acre</label>
-        <input type="text" id="f_ppacre" placeholder="$850,000">
-      </div>
-      <div class="form-group">
-        <label>Building SF</label>
-        <input type="text" id="f_sf" placeholder="31,000 SF">
-      </div>
-      <div class="form-group">
-        <label>Lot SF / Acres</label>
-        <input type="text" id="f_lotsize" placeholder="3.2 acres / 139,000 SF">
-      </div>
-      <div class="form-group">
-        <label>Cap Rate</label>
-        <input type="text" id="f_cap" placeholder="5.25%">
-      </div>
-      <div class="form-group">
-        <label>Rent / SF</label>
-        <input type="text" id="f_rentpsf" placeholder="$8.50 NNN">
-      </div>
-      <div class="form-group">
-        <label>Rent / Acre</label>
-        <input type="text" id="f_rentacre" placeholder="$45,000/ac">
-      </div>
-      <div class="form-group">
-        <label>Sale Date</label>
-        <input type="date" id="f_date">
-      </div>
-      <div class="form-group">
-        <label>Buyer</label>
-        <input type="text" id="f_buyer" placeholder="Buyer name">
-      </div>
-      <div class="form-group">
-        <label>Seller</label>
-        <input type="text" id="f_seller" placeholder="Seller name">
-      </div>
-      <div class="form-group">
-        <label>Added By</label>
-        <input type="text" id="f_addedby" placeholder="Your name">
-      </div>
-      <div class="form-group full">
-        <label>Notes</label>
-        <textarea id="f_notes" placeholder="Lease type, tenant, condition, deal notes..."></textarea>
-      </div>
+      <div class="form-group"><label>Sale Price</label><input type="text" id="f_price" placeholder="$4,500,000"></div>
+      <div class="form-group"><label>Price / SF</label><input type="text" id="f_ppsf" placeholder="$145"></div>
+      <div class="form-group"><label>Price / Acre</label><input type="text" id="f_ppacre" placeholder="$850,000"></div>
+      <div class="form-group"><label>Building SF</label><input type="text" id="f_sf" placeholder="31,000 SF"></div>
+      <div class="form-group"><label>Lot SF / Acres</label><input type="text" id="f_lotsize" placeholder="3.2 acres"></div>
+      <div class="form-group"><label>Cap Rate</label><input type="text" id="f_cap" placeholder="5.25%"></div>
+      <div class="form-group"><label>Rent / SF</label><input type="text" id="f_rentpsf" placeholder="$8.50 NNN"></div>
+      <div class="form-group"><label>Rent / Acre</label><input type="text" id="f_rentacre" placeholder="$45,000/ac"></div>
+      <div class="form-group"><label>Sale Date</label><input type="date" id="f_date"></div>
+      <div class="form-group"><label>Buyer</label><input type="text" id="f_buyer" placeholder="Buyer name"></div>
+      <div class="form-group"><label>Seller</label><input type="text" id="f_seller" placeholder="Seller name"></div>
+      <div class="form-group"><label>Added By</label><input type="text" id="f_addedby" placeholder="Your name"></div>
+      <div class="form-group full"><label>Notes</label><textarea id="f_notes" placeholder="Lease type, tenant, condition, deal notes..."></textarea></div>
     </div>
     <div class="modal-btns">
-      <span class="saving-msg" id="savingMsg" style="display:none">Saving to GitHub...</span>
-      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <span class="saving-msg" id="compSavingMsg" style="display:none">Saving...</span>
+      <button class="btn-cancel" onclick="closeCompModal()">Cancel</button>
       <button class="btn-save" onclick="saveComp()">Save Comp</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="marketModalBg">
+  <div class="modal" style="max-width:700px">
+    <h2>Manage Markets</h2>
+    <p style="font-size:12px;color:var(--text-3);margin-bottom:1rem">Add, edit, or delete markets. Leave data fields blank if unknown — they'll show as — in the table.</p>
+    <div id="marketList" style="max-height:320px;overflow-y:auto;margin-bottom:1rem;border:0.5px solid var(--border);border-radius:var(--radius);padding:0 12px"></div>
+    <div style="background:var(--bg);border-radius:var(--radius-lg);padding:1.25rem;border:0.5px solid var(--border)">
+      <div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:12px" id="mFormTitle">Add New Market</div>
+      <input type="hidden" id="m_editGeo" value="">
+      <div class="form-grid">
+        <div class="form-group full"><label>Market Name</label><input type="text" id="m_geo" placeholder="e.g. Birmingham, AL - USA"></div>
+        <div class="form-group"><label>Tier</label>
+          <select id="m_tier">
+            <option value="1">Tier 1 — Gateway</option>
+            <option value="2">Tier 2 — High-Growth</option>
+            <option value="3">Tier 3 — Secondary</option>
+            <option value="4">Tier 4 — Regional</option>
+            <option value="5">Tier 5 — Emerging</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Sale Price / SF</label><input type="text" id="m_ppsf" placeholder="$145"></div>
+        <div class="form-group"><label>Asking Rent / SF</label><input type="text" id="m_rent" placeholder="$8.50"></div>
+        <div class="form-group"><label>Vacancy %</label><input type="text" id="m_vacancy" placeholder="6.2"></div>
+        <div class="form-group"><label>Cap Rate %</label><input type="text" id="m_cap" placeholder="5.25"></div>
+        <div class="form-group"><label>Occupancy %</label><input type="text" id="m_occ" placeholder="93.8"></div>
+        <div class="form-group"><label>Net Absorption SF</label><input type="text" id="m_absorption" placeholder="1500000"></div>
+        <div class="form-group"><label>Delivered SF</label><input type="text" id="m_deliv" placeholder="800000"></div>
+        <div class="form-group"><label>Rent Growth 12mo %</label><input type="text" id="m_rentGrowth" placeholder="3.2"></div>
+      </div>
+      <div class="modal-btns" style="margin-top:0.5rem">
+        <span class="saving-msg" id="mktSavingMsg" style="display:none">Saving...</span>
+        <button class="btn-cancel" id="mCancelEdit" style="display:none" onclick="resetMarketForm()">Cancel Edit</button>
+        <button class="btn-save" onclick="saveMarket()">Save Market</button>
+      </div>
+    </div>
+    <div class="modal-btns" style="margin-top:1rem">
+      <button class="btn-cancel" onclick="closeMarketModal()">Close</button>
     </div>
   </div>
 </div>
@@ -214,26 +215,32 @@ td.metro{font-weight:500;max-width:220px;white-space:normal;color:var(--navy)}
 const GITHUB_TOKEN='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';
 const GITHUB_REPO='philmaisano/isb-dashboard';
 const COMPS_FILE='comps.json';
+const MARKETS_FILE='markets_custom.json';
 
 function fmtSF(n){if(n==null)return'—';if(Math.abs(n)>=1e6)return(n/1e6).toFixed(1)+'M SF';if(Math.abs(n)>=1000)return(n/1000).toFixed(0)+'K SF';return n+' SF';}
-function fmtVol(n){if(n==null)return'—';if(n>=1e9)return'$'+(n/1e9).toFixed(2)+'B';if(n>=1e6)return'$'+(n/1e6).toFixed(0)+'M';if(n>=1000)return'$'+(n/1000).toFixed(0)+'K';return'$'+n.toLocaleString();}
 function fmtPct(n){if(n==null)return'—';return n.toFixed(1)+'%';}
 function fmtDollar(n){if(n==null)return'—';return'$'+n.toFixed(2);}
+function fmtVol(n){if(n==null)return'—';if(n>=1e9)return'$'+(n/1e9).toFixed(2)+'B';if(n>=1e6)return'$'+(n/1e6).toFixed(0)+'M';return'$'+n.toLocaleString();}
 function tierLabel(t){return["","Tier 1","Tier 2","Tier 3","Tier 4","Tier 5"][t]||'—';}
 function tierClass(t){return["","t1","t2","t3","t4","t5"][t]||'';}
 function trendHtml(v){if(v==null)return'<span class="trend-flat">—</span>';if(v>0.5)return'<span class="trend-up">↑ '+v.toFixed(1)+'%</span>';if(v<-0.5)return'<span class="trend-dn">↓ '+v.toFixed(1)+'%</span>';return'<span class="trend-flat">— '+v.toFixed(1)+'%</span>';}
-let allData=[],allComps=[],vacChart=null,rentChart=null,capChart=null,absChart=null;
+function parseNum(s){if(!s)return null;const n=parseFloat(s.toString().replace(/[$,%]/g,''));return isNaN(n)?null:n;}
+
+let allData=[],allComps=[],customMarkets=[],vacChart=null,rentChart=null,capChart=null,absChart=null;
 
 Promise.all([
   fetch('data.json').then(r=>r.json()),
-  fetch('comps.json?t='+Date.now()).then(r=>r.json()).catch(()=>[])
-]).then(([markets,comps])=>{
-  allData=markets;allComps=comps;
+  fetch('comps.json?t='+Date.now()).then(r=>r.json()).catch(()=>[]),
+  fetch('markets_custom.json?t='+Date.now()).then(r=>r.json()).catch(()=>[])
+]).then(([markets,comps,custom])=>{
+  allData=[...markets,...custom];
+  allComps=comps;
+  customMarkets=custom;
   const latest=markets[0]?.period||'';
   if(latest){document.getElementById('topPeriod').textContent=latest;document.getElementById('topPeriod').style.display='inline-block';}
   document.getElementById('loadingMsg').style.display='none';
   document.getElementById('dashContent').style.display='block';
-  document.getElementById('footerNote').innerHTML='<strong>Source:</strong> CoStar — '+markets.length+' markets. '+comps.length+' comps on file. Period: '+latest+'.';
+  document.getElementById('footerNote').innerHTML='<strong>Source:</strong> CoStar — '+markets.length+' markets + '+custom.length+' custom. '+comps.length+' comps on file.';
   renderAll();
 }).catch(err=>{document.getElementById('loadingMsg').innerHTML='<p style="color:#A32D2D;font-size:13px">Error: '+err.message+'</p>';});
 
@@ -241,17 +248,16 @@ function getSearch(){return document.getElementById('searchBox').value.toLowerCa
 function getFilteredMarkets(){
   const s=getSearch(),t=document.getElementById('tierFilter').value,sc=document.getElementById('sortCol').value;
   let data=allData.filter(m=>{if(s&&!m.geo.toLowerCase().includes(s))return false;if(t&&m.tier!=parseInt(t))return false;return true;});
-  data.sort((a,b)=>{if(sc==='tier')return a.tier-b.tier;if(sc==='ppsf')return(b.ppsf||0)-(a.ppsf||0);if(sc==='rent')return(b.rent||0)-(a.rent||0);if(sc==='vacancy')return(a.vacancy||99)-(b.vacancy||99);if(sc==='cap')return(b.cap||0)-(a.cap||0);if(sc==='absorption')return(b.absorption||0)-(a.absorption||0);if(sc==='volume')return(b.vol||0)-(a.vol||0);return a.tier-b.tier;});
+  data.sort((a,b)=>{if(sc==='tier')return a.tier-b.tier;if(sc==='ppsf')return(b.ppsf||0)-(a.ppsf||0);if(sc==='rent')return(b.rent||0)-(a.rent||0);if(sc==='vacancy')return(a.vacancy||99)-(b.vacancy||99);if(sc==='cap')return(b.cap||0)-(a.cap||0);if(sc==='absorption')return(b.absorption||0)-(a.absorption||0);return a.tier-b.tier;});
   return data;
 }
 function getFilteredComps(){
   const s=getSearch();if(!s)return[];
-  return allComps.filter(c=>c.market&&c.market.toLowerCase().includes(s));
+  return allComps.map((c,i)=>({...c,_idx:i})).filter(c=>c.market&&c.market.toLowerCase().includes(s));
 }
 function renderAll(){
-  renderSummary(getFilteredMarkets());
-  renderCharts(getFilteredMarkets());
-  renderTable(getFilteredMarkets());
+  const markets=getFilteredMarkets();
+  renderSummary(markets);renderCharts(markets);renderTable(markets);
   renderComps(getFilteredComps());
 }
 function renderComps(comps){
@@ -260,9 +266,16 @@ function renderComps(comps){
   if(!comps.length){sec.style.display='none';return;}
   sec.style.display='block';
   document.getElementById('compsMarketLabel').textContent=s.charAt(0).toUpperCase()+s.slice(1);
+  document.getElementById('compsCount').textContent=comps.length+' comp'+(comps.length===1?'':'s');
   document.getElementById('compsList').innerHTML=comps.sort((a,b)=>new Date(b.dateAdded)-new Date(a.dateAdded)).map(c=>`
     <div class="comp-card">
-      <div class="comp-address">${c.address||'—'}</div>
+      <div class="comp-card-header">
+        <div class="comp-address">${c.address||'—'}</div>
+        <div class="comp-actions">
+          <button class="btn-edit" onclick="editComp(${c._idx})">Edit</button>
+          <button class="btn-del" onclick="deleteComp(${c._idx})">Delete</button>
+        </div>
+      </div>
       <div class="comp-meta">
         <span><strong>Type:</strong> ${c.type||'—'}</span>
         <span><strong>Sale Price:</strong> ${c.price||'—'}</span>
@@ -283,8 +296,15 @@ function renderComps(comps){
     </div>`).join('');
 }
 function renderSummary(data){
-  const has=arr=>arr.filter(x=>x!=null),avg=arr=>{const h=has(arr);return h.length?h.reduce((s,v)=>s+v,0)/h.length:null;},sm=arr=>has(arr).reduce((s,v)=>s+v,0);
-  document.getElementById('summaryRow').innerHTML=[{label:'Avg vacancy',val:fmtPct(avg(data.map(m=>m.vacancy)))},{label:'Avg asking rent/SF',val:fmtDollar(avg(data.map(m=>m.rent)))},{label:'Avg sale price/SF',val:fmtDollar(avg(data.map(m=>m.ppsf)))},{label:'Avg cap rate',val:fmtPct(avg(data.map(m=>m.cap)))},{label:'Total sales volume',val:fmtVol(sm(data.map(m=>m.vol||0)))},{label:'Markets shown',val:data.length}].map(m=>'<div class="mc"><div class="mc-label">'+m.label+'</div><div class="mc-val">'+m.val+'</div></div>').join('');
+  const has=arr=>arr.filter(x=>x!=null),avg=arr=>{const h=has(arr);return h.length?h.reduce((s,v)=>s+v,0)/h.length:null;};
+  document.getElementById('summaryRow').innerHTML=[
+    {label:'Avg vacancy',val:fmtPct(avg(data.map(m=>m.vacancy)))},
+    {label:'Avg asking rent/SF',val:fmtDollar(avg(data.map(m=>m.rent)))},
+    {label:'Avg sale price/SF',val:fmtDollar(avg(data.map(m=>m.ppsf)))},
+    {label:'Avg cap rate',val:fmtPct(avg(data.map(m=>m.cap)))},
+    {label:'Markets shown',val:data.length},
+    {label:'Total comps',val:allComps.length}
+  ].map(m=>'<div class="mc"><div class="mc-label">'+m.label+'</div><div class="mc-val">'+m.val+'</div></div>').join('');
 }
 function renderCharts(data){
   const top=data.slice(0,15),labels=top.map(m=>m.geo.replace(/ - .*/,'').replace(/,.*/,'').substring(0,16));
@@ -296,12 +316,27 @@ function renderCharts(data){
   absChart=mk('absChart',top.map(m=>m.absorption!=null?parseFloat((m.absorption/1e6).toFixed(2)):null),'#534AB7',v=>v+'M');
 }
 function renderTable(data){
-  if(!data.length){document.getElementById('tableBody').innerHTML='<tr><td colspan="14" style="padding:2rem;text-align:center;color:#888">No markets match filters.</td></tr>';return;}
-  document.getElementById('tableBody').innerHTML=data.map(m=>'<tr><td class="metro">'+m.geo.replace(/ - .*/,'')+'</td><td><span class="tier-badge '+tierClass(m.tier)+'">'+tierLabel(m.tier)+'</span></td><td>'+fmtDollar(m.ppsf)+'</td><td>'+fmtDollar(m.rent)+'</td><td>'+fmtDollar(m.nnn)+'</td><td>'+fmtPct(m.vacancy)+'</td><td>'+fmtPct(m.avail)+'</td><td>'+fmtSF(m.absorption)+'</td><td>'+fmtPct(m.cap)+'</td><td>'+fmtPct(m.occ)+'</td><td>'+fmtSF(m.uc)+'</td><td>'+fmtVol(m.vol)+'</td><td>'+fmtSF(m.deliv)+'</td><td>'+trendHtml(m.rentGrowth)+'</td></tr>').join('');
+  if(!data.length){document.getElementById('tableBody').innerHTML='<tr><td colspan="10" style="padding:2rem;text-align:center;color:#888">No markets match filters.</td></tr>';return;}
+  document.getElementById('tableBody').innerHTML=data.map(m=>'<tr><td class="metro">'+m.geo.replace(/ - .*/,'')+'</td><td><span class="tier-badge '+tierClass(m.tier)+'">'+tierLabel(m.tier)+'</span></td><td>'+fmtDollar(m.ppsf)+'</td><td>'+fmtDollar(m.rent)+'</td><td>'+fmtPct(m.vacancy)+'</td><td>'+fmtSF(m.absorption)+'</td><td>'+fmtPct(m.cap)+'</td><td>'+fmtPct(m.occ)+'</td><td>'+fmtSF(m.deliv)+'</td><td>'+trendHtml(m.rentGrowth)+'</td></tr>').join('');
 }
-function openModal(){document.getElementById('modalBg').classList.add('open');document.getElementById('f_date').valueAsDate=new Date();}
-function closeModal(){document.getElementById('modalBg').classList.remove('open');}
+
+function openCompModal(editIdx=-1){
+  document.getElementById('f_editIndex').value=editIdx;
+  document.getElementById('compModalTitle').textContent=editIdx>=0?'Edit Comp':'Add Traded Comp';
+  const fields=['address','market','price','ppsf','ppacre','sf','lotsize','cap','rentpsf','rentacre','date','buyer','seller','addedby','notes'];
+  if(editIdx>=0){const c=allComps[editIdx];fields.forEach(f=>{const el=document.getElementById('f_'+f);if(el)el.value=c[f]||'';});document.getElementById('f_type').value=allComps[editIdx].type||'IOS';}
+  else{fields.forEach(f=>{const el=document.getElementById('f_'+f);if(el)el.value='';});document.getElementById('f_date').valueAsDate=new Date();}
+  document.getElementById('compModalBg').classList.add('open');
+}
+function closeCompModal(){document.getElementById('compModalBg').classList.remove('open');}
+function editComp(idx){openCompModal(idx);}
+async function deleteComp(idx){
+  if(!confirm('Delete this comp?'))return;
+  const updated=allComps.filter((_,i)=>i!==idx);
+  if(await pushFile(COMPS_FILE,updated,'Delete comp')){allComps=updated;renderAll();}
+}
 async function saveComp(){
+  const editIdx=parseInt(document.getElementById('f_editIndex').value);
   const comp={
     address:document.getElementById('f_address').value.trim(),
     market:document.getElementById('f_market').value.trim(),
@@ -319,23 +354,110 @@ async function saveComp(){
     seller:document.getElementById('f_seller').value.trim(),
     addedby:document.getElementById('f_addedby').value.trim(),
     notes:document.getElementById('f_notes').value.trim(),
-    dateAdded:new Date().toLocaleDateString()
+    dateAdded:editIdx>=0?(allComps[editIdx].dateAdded||new Date().toLocaleDateString()):new Date().toLocaleDateString(),
+    dateEdited:editIdx>=0?new Date().toLocaleDateString():undefined
   };
   if(!comp.address||!comp.market){alert('Address and market are required.');return;}
-  const msg=document.getElementById('savingMsg');msg.style.display='inline';
+  const msg=document.getElementById('compSavingMsg');msg.style.display='inline';
+  let updated;
+  if(editIdx>=0){updated=[...allComps];updated[editIdx]=comp;}else{updated=[...allComps,comp];}
+  if(await pushFile(COMPS_FILE,updated,editIdx>=0?'Edit comp':'Add comp: '+comp.address)){
+    allComps=updated;msg.style.display='none';closeCompModal();renderAll();
+    if(editIdx<0)alert('Comp saved. Search "'+comp.market+'" to see it.');
+  } else {msg.style.display='none';}
+}
+
+function openMarketModal(){
+  renderMarketList();
+  document.getElementById('marketModalBg').classList.add('open');
+}
+function closeMarketModal(){document.getElementById('marketModalBg').classList.remove('open');}
+function resetMarketForm(){
+  document.getElementById('m_editGeo').value='';
+  document.getElementById('mFormTitle').textContent='Add New Market';
+  document.getElementById('mCancelEdit').style.display='none';
+  ['m_geo','m_ppsf','m_rent','m_vacancy','m_cap','m_occ','m_absorption','m_deliv','m_rentGrowth'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('m_tier').value='5';
+}
+function renderMarketList(){
+  const list=document.getElementById('marketList');
+  if(!customMarkets.length){list.innerHTML='<p style="font-size:12px;color:var(--text-3);padding:12px 0">No custom markets yet. Add one below.</p>';return;}
+  list.innerHTML=customMarkets.map((m,i)=>`
+    <div class="market-row">
+      <div class="market-name">${m.geo.replace(/ - .*/,'')}</div>
+      <span class="market-tier ${tierClass(m.tier)}">${tierLabel(m.tier)}</span>
+      <button class="btn-edit" onclick="editMarket(${i})">Edit</button>
+      <button class="btn-del" onclick="deleteMarket(${i})">Delete</button>
+    </div>`).join('');
+}
+function editMarket(idx){
+  const m=customMarkets[idx];
+  document.getElementById('m_editGeo').value=m.geo;
+  document.getElementById('mFormTitle').textContent='Edit: '+m.geo.replace(/ - .*/,'');
+  document.getElementById('mCancelEdit').style.display='inline-block';
+  document.getElementById('m_geo').value=m.geo;
+  document.getElementById('m_tier').value=m.tier||5;
+  document.getElementById('m_ppsf').value=m.ppsf||'';
+  document.getElementById('m_rent').value=m.rent||'';
+  document.getElementById('m_vacancy').value=m.vacancy||'';
+  document.getElementById('m_cap').value=m.cap||'';
+  document.getElementById('m_occ').value=m.occ||'';
+  document.getElementById('m_absorption').value=m.absorption||'';
+  document.getElementById('m_deliv').value=m.deliv||'';
+  document.getElementById('m_rentGrowth').value=m.rentGrowth||'';
+}
+async function deleteMarket(idx){
+  if(!confirm('Delete this market?'))return;
+  const updated=customMarkets.filter((_,i)=>i!==idx);
+  if(await pushFile(MARKETS_FILE,updated,'Delete market')){
+    customMarkets=updated;
+    allData=allData.filter(m=>!m._custom||customMarkets.some(c=>c.geo===m.geo));
+    allData=allData.filter(m=>!m._custom);
+    allData=[...allData.filter(m=>!m._custom),...customMarkets.map(m=>({...m,_custom:true}))];
+    renderAll();renderMarketList();
+  }
+}
+async function saveMarket(){
+  const editGeo=document.getElementById('m_editGeo').value;
+  const market={
+    geo:document.getElementById('m_geo').value.trim(),
+    tier:parseInt(document.getElementById('m_tier').value),
+    ppsf:parseNum(document.getElementById('m_ppsf').value),
+    rent:parseNum(document.getElementById('m_rent').value),
+    vacancy:parseNum(document.getElementById('m_vacancy').value),
+    cap:parseNum(document.getElementById('m_cap').value),
+    occ:parseNum(document.getElementById('m_occ').value),
+    absorption:parseNum(document.getElementById('m_absorption').value),
+    deliv:parseNum(document.getElementById('m_deliv').value),
+    rentGrowth:parseNum(document.getElementById('m_rentGrowth').value),
+    _custom:true,
+    dateAdded:new Date().toLocaleDateString()
+  };
+  if(!market.geo){alert('Market name is required.');return;}
+  const msg=document.getElementById('mktSavingMsg');msg.style.display='inline';
+  let updated;
+  if(editGeo){updated=customMarkets.map(m=>m.geo===editGeo?market:m);}
+  else{
+    if(customMarkets.some(m=>m.geo===market.geo)){alert('Market already exists.');msg.style.display='none';return;}
+    updated=[...customMarkets,market];
+  }
+  if(await pushFile(MARKETS_FILE,updated,editGeo?'Edit market':'Add market: '+market.geo)){
+    customMarkets=updated;
+    allData=[...allData.filter(m=>!m._custom),...customMarkets];
+    msg.style.display='none';resetMarketForm();renderAll();renderMarketList();
+  } else {msg.style.display='none';}
+}
+
+async function pushFile(filename,data,message){
   try{
     let sha='';
-    const existing=await fetch('https://api.github.com/repos/'+GITHUB_REPO+'/contents/'+COMPS_FILE,{headers:{Authorization:'token '+GITHUB_TOKEN}});
+    const existing=await fetch('https://api.github.com/repos/'+GITHUB_REPO+'/contents/'+filename,{headers:{Authorization:'token '+GITHUB_TOKEN}});
     if(existing.ok){const d=await existing.json();sha=d.sha;}
-    const updated=[...allComps,comp];
-    const content=btoa(unescape(encodeURIComponent(JSON.stringify(updated,null,2))));
-    const res=await fetch('https://api.github.com/repos/'+GITHUB_REPO+'/contents/'+COMPS_FILE,{method:'PUT',headers:{Authorization:'token '+GITHUB_TOKEN,'Content-Type':'application/json'},body:JSON.stringify({message:'Add comp: '+comp.address,content,sha})});
-    if(!res.ok)throw new Error('GitHub save failed — check token');
-    allComps=updated;msg.style.display='none';closeModal();
-    ['f_address','f_market','f_price','f_ppsf','f_ppacre','f_sf','f_lotsize','f_cap','f_rentpsf','f_rentacre','f_buyer','f_seller','f_addedby','f_notes'].forEach(id=>document.getElementById(id).value='');
-    renderAll();
-    alert('Comp saved. Search "'+comp.market+'" to see it.');
-  }catch(err){msg.style.display='none';alert('Error: '+err.message);}
+    const content=btoa(unescape(encodeURIComponent(JSON.stringify(data,null,2))));
+    const res=await fetch('https://api.github.com/repos/'+GITHUB_REPO+'/contents/'+filename,{method:'PUT',headers:{Authorization:'token '+GITHUB_TOKEN,'Content-Type':'application/json'},body:JSON.stringify({message,content,sha})});
+    if(!res.ok)throw new Error('Save failed — check your token');
+    return true;
+  }catch(err){alert('Error: '+err.message);return false;}
 }
 </script>
 </body>
